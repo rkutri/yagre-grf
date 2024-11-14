@@ -27,14 +27,14 @@ class CombinedRandomField1d(GaussianRandomField):
 
         self._nDof = nGrid - 2
 
-        self._detCoeff = sqrt([cov_ftrans(0.5 * m) for m in range(nDof + 1)])
+        self._detCoeff = sqrt([cov_ftrans(0.5 * m) for m in range(nGrid - 1)])
 
     def generate(self, nSamp, nPrintIntervals=10):
 
         # print info every pInterval samples
         pInterval = nSamp // nPrintIntervals
 
-        samples = []
+        realisations = []
 
         for n in range(nSamp):
 
@@ -43,8 +43,8 @@ class CombinedRandomField1d(GaussianRandomField):
                     f"Start generating {nSamp} 1d CRF realisations")
 
             # log information on number of generated samples
-            if nSamp > printIntervals:
-                if n % pInterval == 0:
+            if nSamp > nPrintIntervals:
+                if n % pInterval == 0 and n != 0:
                     crf1dLogger.info(f"{n} realisations generated")
 
             dirEval = sin_series(
@@ -58,6 +58,6 @@ class CombinedRandomField1d(GaussianRandomField):
                     1) *
                 self._detCoeff)
 
-            samples += [(dirEval + neuEval) / sqrt(2.)]
+            realisations += [(dirEval + neuEval) / sqrt(2.)]
 
-        return samples
+        return realisations
