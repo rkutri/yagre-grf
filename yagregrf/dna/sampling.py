@@ -1,10 +1,10 @@
 import logging
-import utility
 
 from numpy import sqrt, zeros
 from numpy.random import standard_normal
-from interface import GaussianRandomField
-from series import sin_series, cos_series
+from dna.interface import GaussianRandomField
+from utility.series import sin_series, cos_series
+from utility.evaluation import norm
 
 
 # set up logger
@@ -71,7 +71,7 @@ class DNAGaussianRandomField2d(GaussianRandomField):
 
         for i in range(self._nDof):
             for j in range(self._nDof):
-                fourierEval[i, j] = cov_ftrans(0.5 * utility.norm([i, j]))
+                fourierEval[i, j] = cov_ftrans(0.5 * norm([i, j]))
 
         self._detCoeff = sqrt(fourierEval)
 

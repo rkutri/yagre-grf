@@ -1,15 +1,17 @@
 import matplotlib.pyplot as plt
 
 from numpy import linspace
-from dnaSampling import DNAGaussianRandomField1d, DNAGaussianRandomField2d
-from covariances import matern_fourier_ptw
+from dna.sampling import DNAGaussianRandomField1d, DNAGaussianRandomField2d
+from utility.covariances import matern_fourier_ptw
 
 corrLength = 0.1
 smoothness = 1.5
 
-nGrid = 100
+nGrid = [1000, 150]
 
-nSamp = int(1e3)
+nSamp = [int(1e3), int(5e1)]
+
+dimIdx = 0
 
 for DIM in [1, 2]:
 
@@ -17,20 +19,20 @@ for DIM in [1, 2]:
         return matern_fourier_ptw(s, corrLength, smoothness, DIM)
 
     DNARF = DNAGaussianRandomField1d if DIM == 1 else DNAGaussianRandomField2d
-    dnaRF = DNARF(cov_ftrans, nGrid)
+    dnaRF = DNARF(cov_ftrans, nGrid[dimIdx])
 
-    samples = dnaRF.generate(nSamp)
+    samples = dnaRF.generate(nSamp[dimIdx])
 
     fig, axes = plt.subplots(2, 2)
 
-    fig.suptitle(f"DNA GRF in {DIM}d")
+    fig.suptitle(f"{nSamp[dimIdx]} realisations of the DNA GRF in {DIM}d")
 
     if DIM == 1:
 
         nPlot = 50
-        assert nPlot + 3 <= nSamp
+        assert nPlot + 3 <= nSamp[dimIdx]
 
-        grid = linspace(0., 1., nGrid, endpoint=True)
+        grid = linspace(0., 1., nGrid[dimIdx], endpoint=True)
 
         axes[0, 0].plot(grid, samples[0])
         axes[0, 1].plot(grid, samples[1])
@@ -47,3 +49,5 @@ for DIM in [1, 2]:
             fig.colorbar(im, ax=ax)
 
     plt.show()
+
+    dimIdx += 1
