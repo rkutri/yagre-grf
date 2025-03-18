@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 
 from numpy import linspace
-from dna.sampling import DNAGaussianRandomField1d, DNAGaussianRandomField2d
+
+from sampling.randomField import RandomField
+from sampling.dnaFourier import DNAFourierEngine1d, DNAFourierEngine2d
 from utility.covariances import matern_fourier_ptw
 
 corrLength = 0.1
@@ -15,12 +17,18 @@ dimIdx = 0
 
 for DIM in [1, 2]:
 
-    def cov_ftrans(s):
+    def cov_ftrans_callable(s):
         return matern_fourier_ptw(s, corrLength, smoothness, DIM)
 
-    DNARF = DNAGaussianRandomField1d if DIM == 1 else DNAGaussianRandomField2d
-    dnaRF = DNARF(cov_ftrans, nGrid[dimIdx])
+    if (DIM == 1):
+        dnaEngine = DNAFourierEngine1d(cov_ftrans_callable, nGrid[dimIdx])
+    elif (DIM == 2):
+        dnaEngine = DNAFourierEngine2d(cov_ftrans_callable, nGrid[dimIdx])
+    else:
+        raise NotImplementedError(
+            "Currently only dimensions 1 and 2 are implemented")
 
+    dnaRF = RandomField(dnaEngine)
     samples = dnaRF.generate(nSamp[dimIdx])
 
     fig, axes = plt.subplots(2, 2)

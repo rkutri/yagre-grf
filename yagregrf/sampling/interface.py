@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
 
-class GaussianRandomField(ABC):
+class SamplingEngine(ABC):
 
     @abstractmethod
-    def generate(self, nSamp):
+    def generate_realisation(self):
         pass
