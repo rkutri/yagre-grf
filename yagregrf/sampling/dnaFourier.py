@@ -1,5 +1,3 @@
-import logging
-
 from numpy import sqrt, zeros
 from numpy.random import standard_normal
 

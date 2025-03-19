@@ -4,14 +4,17 @@ from numpy import linspace
 
 from sampling.randomField import RandomField
 from sampling.dnaFourier import DNAFourierEngine1d, DNAFourierEngine2d
+from sampling.spde import SPDEEngine2d
+from sampling.dnaSPDE import DNASPDEEngine2d
 from utility.covariances import matern_fourier_ptw
 
 corrLength = 0.1
-smoothness = 1.5
+smoothness = 1
 
 nGrid = [1000, 150]
 
 nSamp = [int(1e3), int(5e1)]
+
 
 dimIdx = 0
 
@@ -24,12 +27,19 @@ for DIM in [1, 2]:
         dnaEngine = DNAFourierEngine1d(cov_ftrans_callable, nGrid[dimIdx])
     elif (DIM == 2):
         dnaEngine = DNAFourierEngine2d(cov_ftrans_callable, nGrid[dimIdx])
+        spdeEngine = DNASPDEEngine2d(
+            corrLength, smoothness, nGrid[dimIdx], 1.)
     else:
         raise NotImplementedError(
             "Currently only dimensions 1 and 2 are implemented")
 
     dnaRF = RandomField(dnaEngine)
+
+    if DIM == 2:
+        dnaRF = RandomField(spdeEngine)
+     
     samples = dnaRF.generate(nSamp[dimIdx])
+
 
     fig, axes = plt.subplots(2, 2)
 
