@@ -4,7 +4,7 @@ import fenics as fncs
 from scipy.special import gamma
 from numpy.random import standard_normal
 
-from sampling.interface import SamplingEngine
+from yagregrf.sampling.interface import SamplingEngine
 
 
 def on_dirichlet_boundary_2d(x, dir0, dir1, delta, TOL=1e-8):

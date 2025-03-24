@@ -9,6 +9,9 @@ class CovarianceAccumulator:
         self._mean = np.zeros(dim)
         self._cov = np.zeros((dim, dim))
 
+        self._dim = dim
+
+
     @property
     def covariance(self):
         return self._cov
@@ -20,6 +23,12 @@ class CovarianceAccumulator:
         self._n += 1
         self._mean += delta / self._n
         self._cov += (np.outer(delta, x - self._mean) - self._cov) / self._n
+
+    def clear(self):
+
+        self._n = 0
+        self._mean = np.zeros(self._dim)
+        self._cov = np.zeros((self._dim, self._dim))
 
 
 # Test

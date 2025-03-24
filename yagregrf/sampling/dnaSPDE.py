@@ -1,7 +1,7 @@
 from numpy import zeros
 
-from sampling.interface import SamplingEngine
-from sampling.spde import SPDEEngine2d
+from yagregrf.sampling.interface import SamplingEngine
+from yagregrf.sampling.spde import SPDEEngine2d
 
 
 class DNASPDEEngine2d(SamplingEngine):

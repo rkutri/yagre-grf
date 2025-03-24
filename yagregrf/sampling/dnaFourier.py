@@ -1,10 +1,10 @@
 from numpy import sqrt, zeros
 from numpy.random import standard_normal
 
-from sampling.randomField import RandomField
-from sampling.interface import SamplingEngine
-from utility.series import sin_series, cos_series
-from utility.evaluation import norm
+from yagregrf.sampling.randomField import RandomField
+from yagregrf.sampling.interface import SamplingEngine
+from yagregrf.utility.series import sin_series, cos_series
+from yagregrf.utility.evaluation import norm
 
 
 class DNAFourierEngine1d(SamplingEngine):

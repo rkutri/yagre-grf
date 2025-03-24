@@ -11,8 +11,9 @@ rfLogger.addHandler(consoleHandler)
 
 class RandomField:
 
-    def __init__(self, engine):
+    def __init__(self, engine, verbose=False):
 
+        self._verbose = verbose
         self._engine = engine
 
     @property
@@ -31,11 +32,13 @@ class RandomField:
 
         for n in range(nSamples):
 
-            if n == 0:
-                rfLogger.info(f"Start generating {nSamples} realisations")
+            if self._verbose:
 
-            elif nSamples > nPrintIntervals and n % printInterval == 0:
-                rfLogger.info(f"{n} realisations generated")
+                if n == 0:
+                    rfLogger.info(f"Start generating {nSamples} realisations")
+
+                elif nSamples > nPrintIntervals and n % printInterval == 0:
+                    rfLogger.info(f"{n} realisations generated")
 
             samples.append(self._engine.generate_realisation())
 
