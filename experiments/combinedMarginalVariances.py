@@ -3,11 +3,13 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
+import yagregrf.utility.covariances as covs
+
 from numpy.random import standard_normal
 from scipy.fft import dct, dctn, dst, dstn
 
-import covariance_functions as covs
-import utility
+from yagregrf.utility.evaluation import norm
+from yagregrf.utility.series import sin_series, cos_series
 
 
 # domain
@@ -40,7 +42,7 @@ fourierEval = np.zeros((nDof + 1, nDof + 1))
 
 for i in range(nDof):
     for j in range(nDof):
-        fourierEval[i, j] = cov_ftrans(0.5 * utility.norm([i, j]))
+        fourierEval[i, j] = cov_ftrans(0.5 * norm([i, j]))
 
 coeff = np.sqrt(fourierEval)
 
@@ -59,9 +61,9 @@ for n in range(nSamp):
     ddCoeff = standard_normal((nDof + 1, nDof + 1)) * coeff
 
     for row in range(nDof + 1):
-        ddEval[row, :] = utility.sin_series(ddCoeff[row, :])
+        ddEval[row, :] = sin_series(ddCoeff[row, :])
     for col in range(nDof + 2):
-        ddEval[:, col] = utility.sin_series(ddEval[:-1, col])
+        ddEval[:, col] = sin_series(ddEval[:-1, col])
 
     ddSample += [ddEval]
 
@@ -70,9 +72,9 @@ for n in range(nSamp):
     dnCoeff = standard_normal((nDof + 1, nDof + 1)) * coeff
 
     for row in range(nDof + 1):
-        dnEval[row, :] = utility.sin_series(dnCoeff[row, :])
+        dnEval[row, :] = sin_series(dnCoeff[row, :])
     for col in range(nDof + 2):
-        dnEval[:, col] = utility.cos_series(dnEval[:-1, col])
+        dnEval[:, col] = cos_series(dnEval[:-1, col])
 
     dnSample += [dnEval]
 
@@ -81,9 +83,9 @@ for n in range(nSamp):
     ndCoeff = standard_normal((nDof + 1, nDof + 1)) * coeff
 
     for row in range(nDof + 1):
-        ndEval[row, :] = utility.cos_series(ndCoeff[row, :])
+        ndEval[row, :] = cos_series(ndCoeff[row, :])
     for col in range(nDof + 2):
-        ndEval[:, col] = utility.sin_series(ndEval[:-1, col])
+        ndEval[:, col] = sin_series(ndEval[:-1, col])
 
     ndSample += [ndEval]
 
@@ -92,9 +94,9 @@ for n in range(nSamp):
     nnCoeff = standard_normal((nDof + 1, nDof + 1)) * coeff
 
     for row in range(nDof + 1):
-        nnEval[row, :] = utility.cos_series(nnCoeff[row, :])
+        nnEval[row, :] = cos_series(nnCoeff[row, :])
     for col in range(nDof + 2):
-        nnEval[:, col] = utility.cos_series(nnEval[:-1, col])
+        nnEval[:, col] = cos_series(nnEval[:-1, col])
 
     nnSample += [nnEval]
 

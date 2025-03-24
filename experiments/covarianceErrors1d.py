@@ -5,11 +5,13 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
+import yagregrf.utility.covariances as covs
+
 from numpy.random import standard_normal
 from scipy.fft import dct, dctn, dst, dstn
 
-import covariance_functions as covs
-import utility
+from yagregrf.utility.evaluation import evaluate_isotropic_covariance_1d
+from yagregrf.utility.series import sin_series, cos_series
 
 
 filenameID = "21"
@@ -80,17 +82,14 @@ for alpha in [1., 2.]:
                     if (n % 10000 == 0):
                         print(str(n) + " realisations computed")
 
-                    dirEval = utility.sin_series(
-                        standard_normal(nDof + 1) * coeff)
-                    neuEval = utility.cos_series(
-                        standard_normal(nDof + 1) * coeff)
+                    dirEval = sin_series(standard_normal(nDof + 1) * coeff)
+                    neuEval = cos_series(standard_normal(nDof + 1) * coeff)
 
                     sample += [(neuEval + dirEval) / np.sqrt(2.)]
 
                 print("finished sampling, computing statistics")
 
-                trueCov = utility.evaluate_isotropic_covariance_1d(
-                    cov_fcn, grid)
+                trueCov = evaluate_isotropic_covariance_1d(cov_fcn, grid)
                 sampCov = np.cov(sample, rowvar=False)
 
                 csvRow.append(np.max(np.abs(trueCov - sampCov)))
@@ -115,17 +114,14 @@ for alpha in [1., 2.]:
                 if (n % 10000 == 0):
                     print(str(n) + " realisations computed")
 
-                dirEval = utility.sin_series(
-                    standard_normal(nDof + 1) * coeff)
-                neuEval = utility.cos_series(
-                    standard_normal(nDof + 1) * coeff)
+                dirEval = sin_series(standard_normal(nDof + 1) * coeff)
+                neuEval = cos_series(standard_normal(nDof + 1) * coeff)
 
                 sample += [(neuEval + dirEval) / np.sqrt(2.)]
 
             print("finished sampling, computing statistics")
 
-            trueCov = utility.evaluate_isotropic_covariance_1d(
-                cov_fcn, grid)
+            trueCov = evaluate_isotropic_covariance_1d(cov_fcn, grid)
             sampCov = np.cov(sample, rowvar=False)
 
             csvRow.append(np.max(np.abs(trueCov - sampCov)))
@@ -152,17 +148,14 @@ for alpha in [1., 2.]:
                 if (n % 10000 == 0):
                     print(str(n) + " realisations computed")
 
-                dirEval = utility.sin_series(
-                    standard_normal(nDof + 1) * coeff)
-                neuEval = utility.cos_series(
-                    standard_normal(nDof + 1) * coeff)
+                dirEval = sin_series(standard_normal(nDof + 1) * coeff)
+                neuEval = cos_series(standard_normal(nDof + 1) * coeff)
 
                 sample += [(neuEval + dirEval) / np.sqrt(2.)]
 
             print("finished sampling, computing statistics")
 
-            trueCov = utility.evaluate_isotropic_covariance_1d(
-                cov_fcn, grid)
+            trueCov = evaluate_isotropic_covariance_1d(cov_fcn, grid)
             sampCov = np.cov(sample, rowvar=False)
 
             csvRow.append(np.max(np.abs(trueCov - sampCov)))

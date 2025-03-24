@@ -2,11 +2,12 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
+import yagregrf.utility.covariances as covs
+
 from numpy.random import standard_normal
 from scipy.fft import rfft, dct, dst
 
-import covariance_functions as covs
-import utility
+from yagregrf.utility.series import sin_series, cos_series
 
 # domain
 domExt = 1.
@@ -50,8 +51,8 @@ for n in range(nSamp):
     if (n % 10000 == 0):
         print(str(n) + " realisations computed.")
 
-    dirSample += [utility.sin_series(standard_normal(nDof + 1) * coeff)]
-    neuSample += [utility.cos_series(standard_normal(nDof + 1) * coeff)]
+    dirSample += [sin_series(standard_normal(nDof + 1) * coeff)]
+    neuSample += [cos_series(standard_normal(nDof + 1) * coeff)]
 
 
 print("Analysing statistics")

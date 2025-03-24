@@ -3,8 +3,6 @@ import numpy as np
 
 import covariance_functions as covs
 import embedding1d as ce
-import crf1d as rf
-import utility as util
 
 
 corrLength = np.linspace(0.05, 0.3, 10, endpoint=True)
