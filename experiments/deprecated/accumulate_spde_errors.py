@@ -20,8 +20,7 @@ filePattern = os.path.join(inDir, filenamePrefix + "*.csv")
 csvFiles = glob(filePattern)
 
 if not csvFiles:
-    print("No files found matching the pattern.")
-    exit()
+    raise RuntimeError("No files found matching the pattern.")
 
 meshWidths = []
 dataAccumulator = []

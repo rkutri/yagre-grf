@@ -10,12 +10,19 @@ class DNASPDEEngine2d(SamplingEngine):
 
         self._nGrid = nVertPerDim
         self._alpha = alpha
-            
-        self._engines = [SPDEEngine2d(corrLength, nu, nVertPerDim, alpha, [False, False]),
-                         SPDEEngine2d(corrLength, nu, nVertPerDim, alpha, [False, True]),
-                         SPDEEngine2d(corrLength, nu, nVertPerDim, alpha, [True, False]),
-                         SPDEEngine2d(corrLength, nu, nVertPerDim, alpha, [True, True])]
 
+        self._engines = [SPDEEngine2d(corrLength, nu, nVertPerDim, alpha, [False, False]),
+                         SPDEEngine2d(
+            corrLength, nu, nVertPerDim, alpha, [
+                False, True]),
+            SPDEEngine2d(
+            corrLength, nu, nVertPerDim, alpha, [
+                True, False]),
+            SPDEEngine2d(corrLength, nu, nVertPerDim, alpha, [True, True])]
+
+    @property
+    def mesh(self):
+        return self._engines[0].mesh
 
     def generate_realisation(self):
 

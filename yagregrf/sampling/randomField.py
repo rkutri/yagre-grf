@@ -18,7 +18,7 @@ class RandomField:
 
     @property
     def engine(self):
-        self._engine = engine
+        return self._engine
 
     @engine.setter
     def engine(self, engine):
