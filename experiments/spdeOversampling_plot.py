@@ -1,160 +1,204 @@
 import os
+import csv
 import numpy as np
 import matplotlib.pyplot as plt
-import csv
+from matplotlib.ticker import ScalarFormatter, LogFormatterMathtext
 from experiments.filename import create_data_string
 
-# Set parameters for filename generation
+# =============================================================================
+# Parameters for Filename Generation
+# =============================================================================
 ell = 0.2
-nu = 1.
+nu = 1.0
 nSampBatch = int(1e5)
 nBatch = 4
 
-# Construct filename
 baseDir = 'data'
 fileStr = create_data_string(
-    ell, nu, nSampBatch, "ACCUMULATED_ERRORS_OVERSAMPLING"
-) + f"_{nBatch}batches.csv"
-filename = os.path.join(baseDir, fileStr)
+    ell,
+    nu,
+    nSampBatch,
+    "ACCUMULATED_ERRORS_OVERSAMPLING") + f"_{nBatch}batches.csv"
+fileName = os.path.join(baseDir, fileStr)
 
-# Read data from CSV
-mesh_widths = []
+# =============================================================================
+# Plot Appearance Settings (variables)
+# =============================================================================
+lineWidth = 0.8         # Thinner lines (for error bars and triangle)
+markerSize = 6          # Marker size for plotted data
+fontSizeLabel = 12      # Axis labels font size
+fontSizeTicks = 10      # Font size for manually set tick labels
+tickLabelSize = 8       # Desired tick label font size
+fontSizeLegend = 8      # Legend text font size
+legendMarkerSize = 4    # Desired marker size in the legend
+
+# Figure size (for 3 figures per row in an 11pt DIN A4 LaTeX publication)
+figWidth = 5.0  # inches
+figHeight = 5.0  # inches
+
+# =============================================================================
+# Read Data from CSV
+# =============================================================================
+meshWidths = []
 methods = []
 errors = {}
-errors_std = {}
+errorsStd = {}
 
-with open(filename, mode='r') as file:
+with open(fileName, mode='r') as file:
     reader = csv.reader(file)
     rows = list(reader)
 
-    # Read mesh widths dynamically from first row
-    mesh_widths = [float(value) for value in rows[0][1:]]
+    # First row: mesh widths (skip first column header)
+    meshWidths = [float(val) for val in rows[0][1:]]
 
-    # Read method names and values
+    # Subsequent rows: alternate between error values and (optional) std errors
     i = 1
     while i < len(rows):
         method = rows[i][0]
         methods.append(method)
-        errors[method] = [float(value) for value in rows[i][1:]]
-        
-        # Read corresponding standard deviation (if available)
+        errors[method] = [float(val) for val in rows[i][1:]]
         if i + 1 < len(rows) and "std" in rows[i + 1][0].lower():
-            errors_std[method] = [float(value) for value in rows[i + 1][1:]]
-            i += 2  # Move to the next method
+            errorsStd[method] = [float(val) for val in rows[i + 1][1:]]
+            i += 2
         else:
-            errors_std[method] = None
+            errorsStd[method] = None
             i += 1
 
-# Define plot styles
-spde_methods = [m for m in methods if "spde_alpha" in m]
-dna_methods = ["DNA_fourier", "DNA_spde"]
+# =============================================================================
+# Define Plot Styles
+# =============================================================================
+# Separate methods into SPDE methods and DNA methods:
+spdeMethods = [m for m in methods if "spde_alpha" in m]
+dnaMethods = ["DNA_fourier", "DNA_spde"]
 
 linestyles = ['-', '--', '-.', ':', (0, (3, 1, 1, 1)), (0, (3, 2, 1, 2))]
-spde_color = 'tab:blue'
-dna_colors = {'DNA_fourier': 'tab:green', 'DNA_spde': 'tab:red'}
+spdeColor = 'tab:blue'
+dnaColors = {'DNA_fourier': 'tab:red', 'DNA_spde': 'tab:green'}
 
-# Define plot parameters
-line_width = 1.5  # Thinner lines
-marker_size = 8  # Smaller marker size for dots
-icon_size = 4  # Smaller icon size for markers
-font_size_label = 12  # Axis labels font size
-font_size_ticks = 8  # Ticks font size
-font_size_legend = 6  # Legend font size
-legend_marker_scale = 0.5
+# =============================================================================
+# Create Figure and Axes
+# =============================================================================
+fig, ax = plt.subplots(figsize=(figWidth, figHeight))
 
-# Set up figure size for three figures per row in 11pt DIN A4 LaTeX
-fig_width = 5.0  # Narrower width to reduce horizontal stretch
-fig_height = 4.0  # Square shape, balanced aspect ratio
-fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-
+# =============================================================================
+# Plot Data
+# =============================================================================
 # Plot SPDE methods (same color, different linestyles)
-for i, method in enumerate(spde_methods):
+for i, method in enumerate(spdeMethods):
     linestyle = linestyles[i % len(linestyles)]
     ax.errorbar(
-        mesh_widths,
+        meshWidths,
         errors[method],
-        yerr=errors_std[method] if errors_std[method] else None,
+        yerr=errorsStd[method],
         fmt='o',
         linestyle=linestyle,
         label=method.replace("_", " "),
-        markersize=marker_size,
-        markeredgewidth=1.,
-        elinewidth=1.,
-        capsize=4,
-        color=spde_color,
+        markersize=markerSize,
+        markeredgewidth=1.5,
+        elinewidth=lineWidth,
+        capsize=5,
+        color=spdeColor,
         alpha=0.9
     )
 
 # Plot DNA methods (unique colors)
-for method in dna_methods:
+for method in dnaMethods:
     if method in errors:
         ax.errorbar(
-            mesh_widths,
+            meshWidths,
             errors[method],
-            yerr=errors_std[method] if errors_std[method] else None,
+            yerr=errorsStd[method],
             fmt='s',
-            linestyle='-',  # Solid for distinction
+            linestyle='-',
             label=method.replace("_", " "),
-            markersize=marker_size,
-            markeredgewidth=1.,
-            elinewidth=1.,
-            capsize=4,
-            color=dna_colors[method],
+            markersize=markerSize,
+            markeredgewidth=1.5,
+            elinewidth=lineWidth,
+            capsize=5,
+            color=dnaColors[method],
             alpha=0.9
         )
 
-# Draw triangle for convergence rate reference
-rate = 0.5  # Example rate 1/2
-base = 0.025  # Adjusted base (smaller)
+# =============================================================================
+# Draw Convergence Rate Triangle
+# =============================================================================
+rate = 0.5
+base = 0.025
 height = rate * base
+xTriangle = [0.05, 0.05 + base]
+yTriangle = [0.02, 0.02 + height]
 
-# Shifted triangle position down and to the left
-x_triangle = [0.05, 0.05 + base]
-y_triangle = [0.02, 0.02 + height]
+ax.plot([xTriangle[0], xTriangle[1]], [yTriangle[0],
+                                       yTriangle[0]], color='black', lw=lineWidth)
+ax.plot([xTriangle[1], xTriangle[1]], [yTriangle[0],
+                                       yTriangle[1]], color='black', lw=lineWidth)
+ax.plot([xTriangle[0], xTriangle[1]], [yTriangle[0],
+                                       yTriangle[1]], color='black', lw=lineWidth)
 
-# Triangle lines (apply line width to all lines)
-ax.plot([x_triangle[0], x_triangle[1]], [y_triangle[0], y_triangle[0]], color='black', lw=line_width)  # Base
-ax.plot([x_triangle[1], x_triangle[1]], [y_triangle[0], y_triangle[1]], color='black', lw=line_width)  # Height
-ax.plot([x_triangle[0], x_triangle[1]], [y_triangle[0], y_triangle[1]], color='black', lw=line_width)  # Hypotenuse
+ax.text(
+    xTriangle[0] +
+    0.5 *
+    base,
+    yTriangle[0] -
+    0.006,
+    '1',
+    fontsize=fontSizeTicks,
+    ha='center')
+ax.text(
+    xTriangle[1] +
+    0.003,
+    yTriangle[1] -
+    0.6 *
+    height,
+    '1/2',
+    fontsize=fontSizeTicks,
+    va='center')
 
-# Annotate catheti lengths
-ax.text(x_triangle[0] + 0.5 * base, y_triangle[0] - 0.006, '1', fontsize=font_size_ticks, ha='center')
-ax.text(x_triangle[1] + 0.003, y_triangle[1] - 0.6 * height, '1/2', fontsize=font_size_ticks, va='center')
-
-# Customize axes
-ax.set_xlabel('Mesh width $h$', fontsize=font_size_label)
-ax.set_ylabel('Error estimate', fontsize=font_size_label)
+# =============================================================================
+# Customize Axes
+# =============================================================================
+ax.set_xlabel('Mesh width $h$', fontsize=fontSizeLabel)
+ax.set_ylabel('Error estimate', fontsize=fontSizeLabel)
 ax.set_xscale('log')
 ax.set_yscale('log')
 ax.grid(True, which='both', linestyle='--', linewidth=0.5)
 
-# Add legend outside the figure
+# Set tick label sizes for both major and minor ticks on both axes
+ax.tick_params(axis='both', which='both', labelsize=tickLabelSize)
+
+
+# =============================================================================
+# Legend Setup
+# =============================================================================
+# Compute marker scale for legend relative to markerSize using
+# legendMarkerSize variable
+markerScaleValue = legendMarkerSize / markerSize
+
 handles, labels = ax.get_legend_handles_labels()
 legend = ax.legend(
     handles,
     labels,
-    fontsize=font_size_legend,  # Reduced font size for legend
+    fontsize=fontSizeLegend,
     loc='upper left',
-    bbox_to_anchor=(1.02, 1),  # Placing outside, to the right
+    bbox_to_anchor=(1.05, 1),
     frameon=True,
     framealpha=0.9,
-    markerscale=legend_marker_scale
+    markerscale=markerScaleValue
 )
-
-# Set alpha for legend text and markers
 for text in legend.get_texts():
     text.set_alpha(1)
-
 for line in legend.get_lines():
     line.set_alpha(1)
 
-# Adjust layout for LaTeX figure arrangement (three figures in one row)
-plt.tight_layout(rect=[0, 0, 0.9, 1])  # Make space for the legend outside the plot
+# =============================================================================
+# Final Layout Adjustments and Save Figure
+# =============================================================================
+plt.tight_layout(rect=[0, 0, 0.85, 1])  # Reserve space for the legend
+ax.set_aspect('auto', adjustable='box')
 
-# Adjust aspect ratio to more balanced (closer to 1:1)
-ax.set_aspect('auto', adjustable='box')  # Make it more balanced and less stretched
-
-# Save and show the plot
-plt.savefig('./spde_oversampling.pdf', format='pdf', dpi=300, bbox_inches='tight')
+plt.savefig(
+    './spde_oversampling.pdf',
+    format='pdf',
+    dpi=300,
+    bbox_inches='tight')
 plt.show()
-
