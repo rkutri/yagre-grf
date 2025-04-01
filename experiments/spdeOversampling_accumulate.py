@@ -11,7 +11,7 @@ from filename import create_data_string
 # Parameters
 ell = 0.2
 nu = 1.0
-nSampBatch = int(1e2)
+nSampBatch = int(1e5)
 
 
 baseDir = 'data'
