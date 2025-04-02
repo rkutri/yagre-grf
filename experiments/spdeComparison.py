@@ -34,7 +34,7 @@ print(f"Filename ID set to: '{filenameID}'")
 DIM = 2
 ell = 0.2
 nu = 1.
-nSamp = int(1e2)
+nSamp = int(5e4)
 
 kappa = np.sqrt(2 * nu) / ell
 beta = 0.5 * (1. + nu)
@@ -42,12 +42,15 @@ beta = 0.5 * (1. + nu)
 dofPerDim = [8, 16, 32, 64, 128]
 oversampling = [1., 1.05, 1.1, 1.2, 1.4, 1.8]
 
+# used in estimation of average time per sample and avg memory peak
+nAvg = 10000
+
 
 def print_sampling_progress(n, nSamp, nUpdates=5):
 
     assert nSamp > nUpdates
 
-    if n % (nSamp // (nUpdates+1)) == 0:
+    if n % (nSamp // (nUpdates + 1)) == 0:
 
         if n == 0:
             print("Start sampling")
@@ -69,17 +72,17 @@ osData = {
     "DNA_fourier": [],
     "DNA_spde": [],
     "SPDE": [[] for _ in oversampling]
-    }
+}
 memData = {
-        "DNA_fourier": {"memory" : [], "error" : []},
-        "DNA_spde": {"memory" : [], "error" : []},
-        "SPDE": {"memory" : [], "error" : []},
-        "nFix": nFixedSPDE}
+    "DNA_fourier": {"memory": [], "error": []},
+    "DNA_spde": {"memory": [], "error": []},
+    "SPDE": {"memory": [], "error": []},
+    "nFix": nFixedSPDE}
 cData = {
-        "DNA_fourier": {"cost" : [], "error" : []},
-        "DNA_spde": {"cost" : [], "error" : []},
-        "SPDE": {"cost" : [], "error" : []},
-        "nFix": nFixedSPDE}
+    "DNA_fourier": {"cost": [], "error": []},
+    "DNA_spde": {"cost": [], "error": []},
+    "SPDE": {"cost": [], "error": []},
+    "nFix": nFixedSPDE}
 
 for nDof in dofPerDim:
 
@@ -95,26 +98,29 @@ for nDof in dofPerDim:
     avgMemPeak = 0.
     avgCost = 0.
 
+    tracemalloc.start()
+
     for n in range(nSamp):
 
-        tracemalloc.start()
-        startTime = time.perf_counter()
+        if n < nAvg:
+            startTime = time.perf_counter()
 
         print_sampling_progress(n, nSamp)
-
         realisation = dnaFourierRF.generate(sampleSize)[0]
 
-        # post-processing
+        if n < nAvg:
 
-        endTime = time.perf_counter()
-        current, peak = tracemalloc.get_traced_memory()
-        tracemalloc.stop()
+            endTime = time.perf_counter()
+            current, peak = tracemalloc.get_traced_memory()
 
-        # convert to MB
-        peak /= 1e6
+            # convert to MB
+            peak /= 1e6
 
-        avgMemPeak += (peak - avgMemPeak) / (n + 1)
-        avgCost += (endTime - startTime - avgCost) / (n + 1)
+            avgMemPeak += (peak - avgMemPeak) / (n + 1)
+            avgCost += (endTime - startTime - avgCost) / (n + 1)
+
+        elif n == nAvg:
+            tracemalloc.stop()
 
         diagSlice = util.extract_diagonal_slice(realisation)
         dnaFourierCov.update(diagSlice)
@@ -133,27 +139,29 @@ for nDof in dofPerDim:
     avgMemPeak = 0.
     avgCost = 0.
 
+    tracemalloc.start()
 
     for n in range(nSamp):
 
-        tracemalloc.start()
-        startTime = time.perf_counter()
+        if n < nAvg:
+            startTime = time.perf_counter()
 
         print_sampling_progress(n, nSamp)
-
         realisation = dnaSPDERF.generate(sampleSize)[0]
 
-        # post-processing
+        if n < nAvg:
 
-        endTime = time.perf_counter()
-        current, peak = tracemalloc.get_traced_memory()
-        tracemalloc.stop()
+            endTime = time.perf_counter()
+            current, peak = tracemalloc.get_traced_memory()
 
-        # convert to MB
-        peak /= 1e6
+            # convert to MB
+            peak /= 1e6
 
-        avgMemPeak += (peak - avgMemPeak) / (n + 1)
-        avgCost += (endTime - startTime - avgCost) / (n + 1)
+            avgMemPeak += (peak - avgMemPeak) / (n + 1)
+            avgCost += (endTime - startTime - avgCost) / (n + 1)
+
+        elif n == nAvg:
+            tracemalloc.stop()
 
         diagSlice = util.extract_diagonal_slice(realisation)
         dnaSPDECov.update(diagSlice)
@@ -188,27 +196,32 @@ for nDof in dofPerDim:
         avgMemPeak = 0.
         avgCost = 0.
 
+        if nDof == nFixedSPDE:
+            tracemalloc.start()
+
         for n in range(nSamp):
 
             print_sampling_progress(n, nSamp)
 
-            if nDof == nFixedSPDE:
-
-                tracemalloc.start()
+            if nDof == nFixedSPDE and n < nAvg:
                 startTime = time.perf_counter()
 
             realisation = spdeRF.generate(sampleSize)[0]
 
             if nDof == nFixedSPDE:
 
-                endTime = time.perf_counter()
-                current, peak = tracemalloc.get_traced_memory()
+                if n < nAvg:
+                    endTime = time.perf_counter()
+                    current, peak = tracemalloc.get_traced_memory()
 
-                # convert to MB
-                peak /= 1e6
+                    # convert to MB
+                    peak /= 1e6
 
-                avgMemPeak += (peak - avgMemPeak) / (n + 1)
-                avgCost += (endTime - startTime - avgCost) / (n + 1)
+                    avgMemPeak += (peak - avgMemPeak) / (n + 1)
+                    avgCost += (endTime - startTime - avgCost) / (n + 1)
+
+                elif n == nAvg:
+                    tracemalloc.stop()
 
             diagSlice = util.extract_diagonal_slice(realisation)
 
@@ -216,8 +229,6 @@ for nDof in dofPerDim:
                 diagSlice = diagSlice[osWidth:-osWidth]
 
             spdeCov.update(diagSlice)
-
-        tracemalloc.stop()
 
         if nDof == nFixedSPDE:
 
