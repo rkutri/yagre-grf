@@ -118,7 +118,9 @@ class SPDEEngine2d(SamplingEngine):
 
         self._solver.solve(u.vector(), b)
 
-        while (self._betaInt > 1):
+        biCounter = self._betaInt
+
+        while (biCounter > 1):
 
             rhs = fncs.Function(self._V)
             rhs.assign(u)
@@ -129,7 +131,7 @@ class SPDEEngine2d(SamplingEngine):
 
             self._solver.solve(u.vector(), b)
 
-            betaInt -= 1
+            biCounter -= 1
 
         return u.compute_vertex_values(
             self._mesh).reshape(self._nGrid, self._nGrid)

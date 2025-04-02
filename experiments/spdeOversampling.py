@@ -18,8 +18,8 @@ from filename import create_data_string
 # Parameters
 DIM = 2
 ell = 0.2
-nu = 1.
-nSamp = int(1e5)
+nu = 3.
+nSamp = int(5e4)
 
 
 # Check if an argument was provided
@@ -52,40 +52,43 @@ def cov_ftrans_callable(s):
     return matern_fourier_ptw(s, ell, nu, DIM)
 
 
-dofPerDim = [8, 16, 32, 64]
-oversampling = [1., 1.2, 1.4, 1.6, 1.8]
+dofPerDim = [8, 16, 32, 64, 128]
+oversampling = [1., 1.2, 1.4, 1.6]
 
 kappa = np.sqrt(2 * nu) / ell
 beta = 0.5 * (1 + nu)
 
+dataString = create_data_string(DIM, ell, nu, nSamp, "OS")
 
 dataDir = 'data'
 dataSubDir = 'oversampling'
+paramDir = dataString
 
 outDir = os.path.join(dataDir, dataSubDir)
+outDir = os.path.join(outDir, paramDir)
 os.makedirs(outDir, exist_ok=True)
 
-filename = os.path.join(
-    outDir,
-    create_data_string(ell, nu, nSamp, "os") + f"_{filenameID}.csv")
+filename = os.path.join(outDir, dataString + f"_{filenameID}.csv")
 
 maxErrorDNAFourier = []
 maxErrorDNASPDE = []
 maxErrorSPDE = [[] for _ in oversampling]
 
 for nDof in dofPerDim:
-    batchsize = 1
+
     print(f"\n\nRunning experiments with {nDof} dofs per dimension")
 
     print(f"\n\n- Running DNA Sampling in Fourier basis")
     dnaFourierRF = RandomField(DNAFourierEngine2d(cov_ftrans_callable, nDof))
     dnaFourierCov = CovarianceAccumulator(nDof)
 
+    sampleSize = 1
+
     for n in range(nSamp):
 
         print_sampling_progress(n, nSamp)
 
-        realisation = dnaFourierRF.generate(batchsize)[0]
+        realisation = dnaFourierRF.generate(sampleSize)[0]
         diagSlice = util.extract_diagonal_slice(realisation)
 
         dnaFourierCov.update(diagSlice)
@@ -98,7 +101,7 @@ for nDof in dofPerDim:
 
         print_sampling_progress(n, nSamp)
 
-        realisation = dnaSPDERF.generate(batchsize)[0]
+        realisation = dnaSPDERF.generate(sampleSize)[0]
         diagSlice = util.extract_diagonal_slice(realisation)
 
         dnaSPDECov.update(diagSlice)
@@ -129,7 +132,7 @@ for nDof in dofPerDim:
 
             print_sampling_progress(n, nSamp)
 
-            realisation = spdeRF.generate(batchsize)[0]
+            realisation = spdeRF.generate(sampleSize)[0]
             diagSlice = util.extract_diagonal_slice(realisation)
 
             if osWidth > 0:
@@ -146,8 +149,7 @@ for nDof in dofPerDim:
     maxErrorDNAFourier.append(
         np.max(
             np.abs(
-                trueCov -
-                dnaFourierCov.covariance)))
+                trueCov - dnaFourierCov.covariance)))
     maxErrorDNASPDE.append(np.max(np.abs(trueCov - dnaSPDECov.covariance)))
 
     for i, spdeCov in enumerate(spdeCovList):

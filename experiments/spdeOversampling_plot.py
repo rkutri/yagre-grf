@@ -8,17 +8,19 @@ from experiments.filename import create_data_string
 # =============================================================================
 # Parameters for Filename Generation
 # =============================================================================
-ell = 0.2
+DIM = 2
+ell = 0.05
 nu = 1.0
 nSampBatch = int(1e5)
-nBatch = 4
+nBatch = 6
 
 baseDir = 'data'
 fileStr = create_data_string(
+    DIM,
     ell,
     nu,
     nSampBatch,
-    "ACCUMULATED_ERRORS_OVERSAMPLING") + f"_{nBatch}batches.csv"
+    "OS_ACCUMULATED") + f"_{nBatch}batches.csv"
 fileName = os.path.join(baseDir, fileStr)
 
 # =============================================================================

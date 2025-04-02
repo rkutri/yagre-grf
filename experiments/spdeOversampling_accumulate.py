@@ -9,17 +9,19 @@ from filename import create_data_string
 
 
 # Parameters
-ell = 0.2
+DIM = 2
+ell = 0.05
 nu = 1.0
 nSampBatch = int(1e5)
 
+filenamePrefix = create_data_string(DIM, ell, nu, nSampBatch, "OS")
 
 baseDir = 'data'
 subDir = 'oversampling'
 
 inDir = os.path.join(baseDir, subDir)
+inDir = os.path.join(inDir, filenamePrefix)
 
-filenamePrefix = create_data_string(ell, nu, nSampBatch, "os")
 filePattern = os.path.join(inDir, filenamePrefix + "_*.csv")
 
 csvFiles = glob(filePattern)
@@ -27,10 +29,11 @@ csvFiles = glob(filePattern)
 nBatch = len(csvFiles)
 
 outFilename = create_data_string(
+    DIM,
     ell,
     nu,
     nSampBatch,
-    "ACCUMULATED_ERRORS_OVERSAMPLING") + f"_{nBatch}batches.csv"
+    "OS_ACCUMULATED") + f"_{nBatch}batches.csv"
 
 if not csvFiles:
     raise RuntimeError("No files found matching the pattern:\n" + filePattern)
@@ -67,10 +70,10 @@ averagedData = {
     method: np.mean(
         errorData[method],
         axis=0).tolist() for method in methods}
+
+ciFactor = 1.96
 errorBars = {
-    method: np.std(
-        errorData[method],
-        axis=0).tolist() for method in methods}
+    method: (ciFactor * np.std(errorData[method], axis=0)).tolist() for method in methods}
 
 # Write to output CSV
 with open(os.path.join(baseDir, outFilename), mode='w', newline='') as file:
@@ -80,4 +83,5 @@ with open(os.path.join(baseDir, outFilename), mode='w', newline='') as file:
 
     for method in methods:
         writer.writerow([method] + averagedData[method])
+
         writer.writerow([f"{method}_std"] + errorBars[method])
