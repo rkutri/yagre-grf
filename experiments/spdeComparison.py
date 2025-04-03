@@ -34,12 +34,12 @@ print(f"Filename ID set to: '{filenameID}'")
 DIM = 2
 ell = 0.2
 nu = 1.
-nSamp = int(1e1)
+nSamp = int(1e5)
 
 kappa = np.sqrt(2 * nu) / ell
 beta = 0.5 * (1. + nu)
 
-dofPerDim = [8, 16, 32, 64, 128]
+dofPerDim = [8, 16, 32, 64, 128, 256]
 oversampling = [1., 1.05, 1.1, 1.2, 1.4, 1.8]
 
 # used in estimation of average time per sample and avg memory current
@@ -48,7 +48,7 @@ nAvg = 10000
 # fixed number of dofs used for SPDE in memory and cost comparison
 nFixedSPDE = dofPerDim[-1]
 
-def print_sampling_progress(n, nSamp, nUpdates=5):
+def print_sampling_progress(n, nSamp, nUpdates=8):
 
     assert nSamp > nUpdates
 
