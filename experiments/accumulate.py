@@ -127,5 +127,5 @@ for subDir, prefix in dataConfig:
                 errorRow = method + "_error"
                 writer.writerow([errorRow] + averagedErrors[method])
 
-                barRow = errorRow + "_bars"
+                barRow = errorRow.replace("_error", "_bars")
                 writer.writerow([barRow] + errorBars[method])

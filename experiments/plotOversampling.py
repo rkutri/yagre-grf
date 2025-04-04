@@ -8,11 +8,12 @@ from experiments.filename import create_data_string
 # =============================================================================
 # Parameters for Filename Generation
 # =============================================================================
+
 DIM = 2
-ell = 0.05
+ell = 0.2
 nu = 1.0
-nSampBatch = int(1e5)
-nBatch = 6
+nSampBatch = int(1e3)
+nBatch = 5
 
 baseDir = 'data'
 fileStr = create_data_string(
@@ -20,62 +21,82 @@ fileStr = create_data_string(
     ell,
     nu,
     nSampBatch,
-    "OS_ACCUMULATED") + f"_{nBatch}batches.csv"
+    "os_ACCUMULATED") + f"_{nBatch}batches.csv"
 fileName = os.path.join(baseDir, fileStr)
 
 # =============================================================================
 # Plot Appearance Settings (variables)
 # =============================================================================
-lineWidth = 0.8         # Thinner lines (for error bars and triangle)
-markerSize = 6          # Marker size for plotted data
-fontSizeLabel = 12      # Axis labels font size
-fontSizeTicks = 10      # Font size for manually set tick labels
-tickLabelSize = 8       # Desired tick label font size
-fontSizeLegend = 8      # Legend text font size
-legendMarkerSize = 4    # Desired marker size in the legend
 
-# Figure size (for 3 figures per row in an 11pt DIN A4 LaTeX publication)
+lineWidth = 0.8         
+markerSize = 6          
+fontSizeLabel = 12      
+fontSizeTicks = 10      
+tickLabelSize = 8       
+fontSizeLegend = 8      
+legendMarkerSize = 4    
+
 figWidth = 5.0  # inches
 figHeight = 5.0  # inches
 
 # =============================================================================
 # Read Data from CSV
 # =============================================================================
-meshWidths = []
+
 methods = []
+meshWidths = []
 errors = {}
-errorsStd = {}
+errorBars = {}
+
+isErrorBar = False
 
 with open(fileName, mode='r') as file:
+
     reader = csv.reader(file)
     rows = list(reader)
 
-    # First row: mesh widths (skip first column header)
-    meshWidths = [float(val) for val in rows[0][1:]]
+    # first row contains mesh widths
+    meshWidths = [float(x) for x in rows[0][1:]]
 
-    # Subsequent rows: alternate between error values and (optional) std errors
-    i = 1
-    while i < len(rows):
-        method = rows[i][0]
-        methods.append(method)
-        errors[method] = [float(val) for val in rows[i][1:]]
-        if i + 1 < len(rows) and "std" in rows[i + 1][0].lower():
-            errorsStd[method] = [float(val) for val in rows[i + 1][1:]]
-            i += 2
+
+    for i in range(1, len(rows)):
+
+        label = rows[i][0]
+        print(label)
+
+        if label.count('_') > 1:
+
+            isErrorBar = True
+            method = label.rsplit('_', 1)[0]
+
         else:
-            errorsStd[method] = None
-            i += 1
+            isErrorBar = False
+            method = label
+
+        if method not in methods:
+            methods.append(method)
+
+        if isErrorBar:
+            if method not in errorBars:
+                errorBars[method] = [float(x) for x in rows[i][1:]]
+        else:
+            if method not in errors:
+                errors[method] = [float(x) for x in rows[i][1:]] 
+
 
 # =============================================================================
 # Define Plot Styles
 # =============================================================================
-# Separate methods into SPDE methods and DNA methods:
-spdeMethods = [m for m in methods if "spde_alpha" in m]
+
 dnaMethods = ["DNA_fourier", "DNA_spde"]
+spdeMethods = [m for m in methods if "SPDE_alpha" in m]
+
+dnaColors = {'DNA_fourier': 'tab:green', 'DNA_spde': 'tab:red'}
+spdeColor = 'tab:blue'
 
 linestyles = ['-', '--', '-.', ':', (0, (3, 1, 1, 1)), (0, (3, 2, 1, 2))]
-spdeColor = 'tab:blue'
-dnaColors = {'DNA_fourier': 'tab:red', 'DNA_spde': 'tab:green'}
+
+markers = ['o', 's', 'D', '*', 'p']
 
 # =============================================================================
 # Create Figure and Axes
@@ -85,14 +106,16 @@ fig, ax = plt.subplots(figsize=(figWidth, figHeight))
 # =============================================================================
 # Plot Data
 # =============================================================================
-# Plot SPDE methods (same color, different linestyles)
+
+# Plot SPDE methods
 for i, method in enumerate(spdeMethods):
-    linestyle = linestyles[i % len(linestyles)]
+    linestyle = linestyles[i]
+    marker = markers[i]
     ax.errorbar(
         meshWidths,
         errors[method],
-        yerr=errorsStd[method],
-        fmt='o',
+        yerr=errorBars[method],
+        fmt=marker,
         linestyle=linestyle,
         label=method.replace("_", " "),
         markersize=markerSize,
@@ -103,15 +126,15 @@ for i, method in enumerate(spdeMethods):
         alpha=0.9
     )
 
-# Plot DNA methods (unique colors)
+# Plot DNA methods
 for method in dnaMethods:
     if method in errors:
         ax.errorbar(
             meshWidths,
             errors[method],
-            yerr=errorsStd[method],
-            fmt='s',
-            linestyle='-',
+            yerr=errorBars[method],
+            fmt=markers[0],
+            linestyle=linestyles[0],
             label=method.replace("_", " "),
             markersize=markerSize,
             markeredgewidth=1.5,
@@ -122,7 +145,7 @@ for method in dnaMethods:
         )
 
 # =============================================================================
-# Draw Convergence Rate Triangle
+# Draw Rate Indication Triangle
 # =============================================================================
 rate = 0.5
 base = 0.025
