@@ -12,7 +12,7 @@ from filename import create_data_string
 DIM = 2
 ell = 0.2
 nu = 1.
-nSampBatch = int(1e1)
+nSampBatch = int(1e3)
 
 
 baseDir = 'data'
@@ -34,15 +34,17 @@ for subDir, prefix in dataConfig:
     nBatch = len(csvFiles)
 
     outFilename = create_data_string(DIM, ell, nu, nSampBatch,
-            prefix + "_ACCUMULATED") + f"_{nBatch}batches.csv"
+                                     prefix + "_ACCUMULATED") + f"_{nBatch}batches.csv"
 
     if not csvFiles:
-        raise RuntimeError("No files found matching the pattern:\n" + filePattern)
+        raise RuntimeError(
+            "No files found matching the pattern:\n" +
+            filePattern)
 
     methods = []
-    errorData = {}
-
-    indepVar = None
+    variableData = {}
+    errorSamples = {}
+    errorBars = {}
 
     for filename in csvFiles:
         with open(filename, 'r') as file:
@@ -50,40 +52,80 @@ for subDir, prefix in dataConfig:
             reader = csv.reader(file)
             rows = list(reader)
 
-            # first row contains the independent variable
-            if indepVar is None:
-                method = rows[0][0]
-                indepVar = [float(value) for value in rows[0][1:]]
+            if prefix == "os":
 
-            for row in rows[1:]:  
-                method = row[0]
-                errors = [float(value) for value in row[1:]]
+                # first row contains the mesh widhts
+                meshWidths = [float(h) for h in rows[0][1:]]
+                variableData["meshWidths"] = meshWidths
 
-                if method not in errorData:
-                    errorData[method] = []
+                for row in rows[1:]:
 
-                errorData[method].append(errors)
+                    method = row[0]
 
-                if method not in methods:
-                    methods.append(method)
+                    if method not in methods:
+                        methods.append(method)
 
-    numFiles = len(csvFiles)
-    averagedData = {method: np.mean(errorData[method], axis=0).tolist()
-                        for method in methods}
+                    if method not in errorSamples:
+                        errorSamples[method] = []
+
+                    errorSamples[method].append([float(x) for x in row[1:]])
+
+            else:
+
+                for row in rows:
+
+                    label = row[0].rsplit('_', 1)
+
+                    method = label[0]
+                    quantity = label[1]
+
+                    if method not in methods:
+                        methods.append(method)
+
+                    if quantity == "error":
+
+                        if method not in errorSamples:
+                            errorSamples[method] = []
+
+                        errors = [float(value) for value in row[1:]]
+                        errorSamples[method].append(errors)
+
+                    else:
+                        variableData[method] = [float(x) for x in row[1:]]
+
+    averagedErrors = {method: np.mean(errorSamples[method], axis=0).tolist()
+                      for method in methods}
 
     # confidence interval ~ 95%
     ciFactor = 1.96
-    errorBars = {method: (ciFactor * np.std(errorData[method],
-                          axis=0)).tolist() for method in methods}
+    errorBars = {method: (ciFactor * np.std(errorSamples[method],
+                                            axis=0)).tolist() for method in methods}
 
     # Write to output CSV
     with open(os.path.join(baseDir, outFilename), mode='w', newline='') as file:
 
         writer = csv.writer(file)
 
-        writer.writerow(["Method"] + [str(x) for x in indepVar])
+        if prefix == "os":
 
-        for method in methods:
-            writer.writerow([method] + averagedData[method])
+            writer.writerow(["meshWidths"] + variableData["meshWidths"])
 
-            writer.writerow([f"{method}_std"] + errorBars[method])
+            for method in methods:
+
+                writer.writerow([method] + averagedErrors[method])
+
+                barRow = method + "_bars"
+                writer.writerow([barRow] + errorBars[method])
+
+        else:
+
+            for method in methods:
+
+                variableRow = method + "_" + subDir
+                writer.writerow([variableRow] + variableData[method])
+
+                errorRow = method + "_error"
+                writer.writerow([errorRow] + averagedErrors[method])
+
+                barRow = errorRow + "_bars"
+                writer.writerow([barRow] + errorBars[method])

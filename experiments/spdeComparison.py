@@ -34,12 +34,12 @@ print(f"Filename ID set to: '{filenameID}'")
 DIM = 2
 ell = 0.2
 nu = 1.
-nSamp = int(1e5)
+nSamp = int(1e3)
 
 kappa = np.sqrt(2 * nu) / ell
 beta = 0.5 * (1. + nu)
 
-dofPerDim = [8, 16, 32, 64, 128, 256]
+dofPerDim = [8, 16, 32, 64, 128]
 oversampling = [1., 1.05, 1.1, 1.2, 1.4, 1.8]
 
 # used in estimation of average time per sample and avg memory current
@@ -47,6 +47,7 @@ nAvg = 10000
 
 # fixed number of dofs used for SPDE in memory and cost comparison
 nFixedSPDE = dofPerDim[-1]
+
 
 def print_sampling_progress(n, nSamp, nUpdates=8):
 
@@ -66,7 +67,6 @@ def cov_fcn(r):
 
 def cov_ftrans_callable(s):
     return matern_fourier_ptw(s, ell, nu, DIM)
-
 
 
 osData = {
@@ -89,7 +89,8 @@ for nDof in dofPerDim:
 
     sampleSize = 1
 
-    print(f"\n\nRunning experiments with {nDof} dofs per dimension")
+    print(f"\n\n\nRunning experiments with {nDof} dofs per dimension")
+    print("--------------------------------------------------")
 
     print(f"\n\n- Running DNA Sampling in Fourier basis")
 
@@ -98,7 +99,6 @@ for nDof in dofPerDim:
 
     avgMem = 0.
     avgCost = 0.
-
 
     for n in range(nSamp):
 
@@ -142,9 +142,8 @@ for nDof in dofPerDim:
     avgMem = 0.
     avgCost = 0.
 
-
     for n in range(nSamp):
-        
+
         print_sampling_progress(n, nSamp)
 
         if n < nAvg:
