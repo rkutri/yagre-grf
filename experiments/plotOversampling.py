@@ -11,7 +11,7 @@ from experiments.filename import create_data_string
 
 DIM = 2
 ell = 0.2
-nu = 1.0
+nu = 3.0
 nSampBatch = int(1e3)
 nBatch = 5
 
@@ -96,7 +96,7 @@ spdeColor = 'tab:blue'
 
 linestyles = ['-', '--', '-.', ':', (0, (3, 1, 1, 1)), (0, (3, 2, 1, 2))]
 
-markers = ['o', 's', 'D', '*', 'p']
+markers = ['o', 's', 'D', '^', 'p', 'v']
 
 # =============================================================================
 # Create Figure and Axes

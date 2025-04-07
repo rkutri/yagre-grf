@@ -11,7 +11,7 @@ from experiments.filename import create_data_string
 
 DIM = 2
 ell = 0.2
-nu = 1.0
+nu = 3.0
 nSampBatch = int(1e3)
 nBatch = 5
 
@@ -64,10 +64,14 @@ for variable, prefix in variables:
 
             method = label[0]
 
+            print(method)
+
             if method not in methods:
                 methods.append(method)
 
             variableName = label[1]
+
+            print(variableName + "\n")
 
             if variableName == variable:
                 if method not in variables:
@@ -86,11 +90,12 @@ for variable, prefix in variables:
     # Define Plot Styles
     # =============================================================================
 
-    colors = {'SPDE': 'tab:blue', 'DNA_fourier': 'tab:green', 'DNA_spde': 'tab:red'}
+    colors = {'SPDE_nFix': 'tab:blue', 'SPDE_osFix' : 'tab:purple',
+              'DNA_fourier': 'tab:green', 'DNA_spde': 'tab:red'}
 
-    linestyles = ['-', '--', '-.']
+    linestyles = ['-', '--', '-.', ':']
 
-    markers = ['o', 's', 'D']
+    markers = ['o', 's', 'D', '^', 'p']
 
     # =============================================================================
     fig, ax = plt.subplots(figsize=(figWidth, figHeight))
@@ -102,7 +107,7 @@ for variable, prefix in variables:
     # Plot SPDE methods
     for i, method in enumerate(methods):
 
-        linestyle = linestyles[i]
+        linestyle = linestyles[0]
         marker = markers[i]
         color = colors[method]
 
@@ -200,7 +205,7 @@ for variable, prefix in variables:
     ax.set_aspect('auto', adjustable='box')
 
     plt.savefig(
-        './spde_oversampling.pdf',
+        f"./spde_comparison_{variable}.pdf",
         format='pdf',
         dpi=300,
         bbox_inches='tight')

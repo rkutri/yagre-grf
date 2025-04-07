@@ -33,23 +33,29 @@ print(f"Filename ID set to: '{filenameID}'")
 # Parameters
 DIM = 2
 ell = 0.2
-nu = 1.
+nu = 3.
 nSamp = int(1e3)
 
 kappa = np.sqrt(2 * nu) / ell
 beta = 0.5 * (1. + nu)
 
-dofPerDim = [8, 16, 32, 64, 128]
+dofPerDim = [8, 16, 32, 64, 128, 256]
 oversampling = [1., 1.05, 1.1, 1.2, 1.4, 1.8]
 
 # used in estimation of average time per sample and avg memory current
-nAvg = 10000
+nAvg = 1000
 
-# fixed number of dofs used for SPDE in memory and cost comparison
+# fixed number of dofs used when only increasing oversampling size
 nFixedSPDE = dofPerDim[-1]
 
+# fixed oversampling size used when decreasing mesh width. Corresponds 
+# to 2 times correlation length heuristic. Use oversampling value which
+# is closest to the heuristic
+osHeuristic = 1. + 2. * DIM * ell # 2 ell in each direction
+osFixedSPDE = min(oversampling, key=lambda x: abs(x - osHeuristic))
 
-def print_sampling_progress(n, nSamp, nUpdates=8):
+
+def print_sampling_progress(n, nSamp, nUpdates=9):
 
     assert nSamp > nUpdates
 
@@ -77,13 +83,15 @@ osData = {
 memData = {
     "DNA_fourier": {"memory": [], "error": []},
     "DNA_spde": {"memory": [], "error": []},
-    "SPDE": {"memory": [], "error": []},
-    "nFix": nFixedSPDE}
+#    "SPDE_nFix": {"memory": [], "error": []},
+    "SPDE_osFix": {"memory": [], "error": []}
+    }
 cData = {
     "DNA_fourier": {"cost": [], "error": []},
     "DNA_spde": {"cost": [], "error": []},
-    "SPDE": {"cost": [], "error": []},
-    "nFix": nFixedSPDE}
+#    "SPDE_nFix": {"cost": [], "error": []},
+    "SPDE_osFix": {"cost": [], "error": []}
+    }
 
 for nDof in dofPerDim:
 
@@ -204,7 +212,7 @@ for nDof in dofPerDim:
 
             print_sampling_progress(n, nSamp)
 
-            if nDof == nFixedSPDE and n < nAvg:
+            if np.abs(osFixedSPDE - alpha) < 1e-8 and n < nAvg:
 
                 tracemalloc.start()
                 startTime = time.perf_counter()
@@ -232,13 +240,21 @@ for nDof in dofPerDim:
 
             spdeCov.update(diagSlice)
 
-        if nDof == nFixedSPDE:
+#         if nDof == nFixedSPDE:
+# 
+#             print(f"\naverage peak memory usage: {avgMem} MB")
+#             print(f"Average time per realisation: {avgCost}")
+# 
+#             memData["SPDE_nFix"]["memory"].append(avgMem)
+#             cData["SPDE_nFix"]["cost"].append(avgCost)
+# 
+        if np.abs(osFixedSPDE - alpha) < 1e-8:
 
             print(f"\naverage peak memory usage: {avgMem} MB")
             print(f"Average time per realisation: {avgCost}")
 
-            memData["SPDE"]["memory"].append(avgMem)
-            cData["SPDE"]["cost"].append(avgCost)
+            memData["SPDE_osFix"]["memory"].append(avgMem)
+            cData["SPDE_osFix"]["cost"].append(avgCost)
 
     diagonalGrid = util.extract_diagonal_from_mesh(dnaSPDERF.engine.mesh)
     trueCov = evaluate_isotropic_covariance_1d(cov_fcn, diagonalGrid)
@@ -261,10 +277,15 @@ for nDof in dofPerDim:
 
         osData["SPDE"][i].append(np.max(np.abs(trueCov - spdeCov.covariance)))
 
-        if nDof == nFixedSPDE:
+#         if nDof == nFixedSPDE:
 
-            memData["SPDE"]["error"].append(maxErrorSPDE)
-            cData["SPDE"]["error"].append(maxErrorSPDE)
+#             memData["SPDE_nFix"]["error"].append(maxErrorSPDE)
+#             cData["SPDE_nFix"]["error"].append(maxErrorSPDE)
+
+        if np.abs(osFixedSPDE - oversampling[i]) < 1e-8:
+
+            memData["SPDE_osFix"]["error"].append(maxErrorSPDE)
+            cData["SPDE_osFix"]["error"].append(maxErrorSPDE)
 
 
 experimentConfig = [
@@ -295,7 +316,7 @@ for dataDir, prefix in experimentConfig:
 
             for i, alpha in enumerate(oversampling):
                 writer.writerow(
-                    [f"SPDE_alpha{int(10*alpha)}"] +
+                    [f"SPDE_alpha{int(100*alpha)}"] +
                     osData["SPDE"][i])
 
         if prefix == "mem":
@@ -312,8 +333,11 @@ for dataDir, prefix in experimentConfig:
                 memData["DNA_spde"]["memory"])
             writer.writerow(["DNA_spde_error"] + memData["DNA_spde"]["error"])
 
-            writer.writerow(["SPDE_memory"] + memData["SPDE"]["memory"])
-            writer.writerow(["SPDE_error"] + memData["SPDE"]["error"])
+#             writer.writerow(["SPDE_nFix_memory"] + memData["SPDE_nFix"]["memory"])
+#             writer.writerow(["SPDE_nFix_error"] + memData["SPDE_nFix"]["error"])
+
+            writer.writerow(["SPDE_osFix_memory"] + memData["SPDE_osFix"]["memory"])
+            writer.writerow(["SPDE_osFix_error"] + memData["SPDE_osFix"]["error"])
 
         if prefix == "cost":
 
@@ -327,5 +351,8 @@ for dataDir, prefix in experimentConfig:
             writer.writerow(["DNA_spde_cost"] + cData["DNA_spde"]["cost"])
             writer.writerow(["DNA_spde_error"] + cData["DNA_spde"]["error"])
 
-            writer.writerow(["SPDE_cost"] + cData["SPDE"]["cost"])
-            writer.writerow(["SPDE_error"] + cData["SPDE"]["error"])
+#             writer.writerow(["SPDE_nFix_cost"] + cData["SPDE_nFix"]["cost"])
+#             writer.writerow(["SPDE_nFix_error"] + cData["SPDE_nFix"]["error"])
+
+            writer.writerow(["SPDE_osFix_cost"] + cData["SPDE_osFix"]["cost"])
+            writer.writerow(["SPDE_osFix_error"] + cData["SPDE_osFix"]["error"])

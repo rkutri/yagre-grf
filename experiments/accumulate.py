@@ -11,7 +11,7 @@ from filename import create_data_string
 # Parameters
 DIM = 2
 ell = 0.2
-nu = 1.
+nu = 3.
 nSampBatch = int(1e3)
 
 
