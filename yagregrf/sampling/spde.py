@@ -94,7 +94,6 @@ class SPDEEngine2d(SamplingEngine):
         else:
             self._A = None
 
-
         m = u * v * df.dx
         M = df.assemble(m)
         self._H = white_noise_factor(M, self._V)
@@ -120,7 +119,8 @@ class SPDEEngine2d(SamplingEngine):
             self._solver.set_operator(self._A)
 
         fDofs = self._f.vector().get_local()
-        fDofs[:] = self._sd * self._varScaling * self._H * standard_normal(self._V.dim())
+        fDofs[:] = self._sd * self._varScaling * \
+            self._H * standard_normal(self._V.dim())
         self._f.vector().set_local(fDofs)
         self._f.vector().apply("insert")
 

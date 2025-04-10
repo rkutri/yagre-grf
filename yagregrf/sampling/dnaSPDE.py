@@ -6,20 +6,21 @@ from yagregrf.sampling.spde import SPDEEngine2d
 
 class DNASPDEEngine2d(SamplingEngine):
 
-    def __init__(self, variance, corrLength, nu, nVertPerDim, alpha, cacheFactorisation=True):
+    def __init__(self, variance, corrLength, nu, nVertPerDim,
+                 alpha, cacheFactorisation=True):
 
         self._nGrid = nVertPerDim
         self._alpha = alpha
 
         self._engines = [
             SPDEEngine2d(variance, corrLength, nu, nVertPerDim, alpha,
-                [False, False], cacheFactorisation),
+                         [False, False], cacheFactorisation),
             SPDEEngine2d(variance, corrLength, nu, nVertPerDim, alpha,
-                [False, True], cacheFactorisation),
+                         [False, True], cacheFactorisation),
             SPDEEngine2d(variance, corrLength, nu, nVertPerDim, alpha,
-                [True, False], cacheFactorisation),
+                         [True, False], cacheFactorisation),
             SPDEEngine2d(variance, corrLength, nu, nVertPerDim, alpha,
-                [True, True], cacheFactorisation)]
+                         [True, True], cacheFactorisation)]
 
     @property
     def mesh(self):

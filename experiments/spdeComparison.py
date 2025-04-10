@@ -16,6 +16,7 @@ from yagregrf.utility.accumulation import CovarianceAccumulator
 from yagregrf.utility.evaluation import evaluate_isotropic_covariance_1d
 from filename import create_data_string
 
+
 # Check if an argument was provided
 if len(sys.argv) < 2:
     print("Usage: python3 script.py <filenameID> (must be two digits)")
