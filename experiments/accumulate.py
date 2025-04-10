@@ -10,9 +10,10 @@ from filename import create_data_string
 
 # Parameters
 DIM = 2
-ell = 0.2
-nu = 3.
-nSampBatch = int(1e3)
+var = 1.
+ell = 0.05
+nu = 1.
+nSampBatch = int(1e2)
 
 
 baseDir = 'data'
@@ -22,7 +23,7 @@ dataConfig = [("oversampling", "os"),
 
 for subDir, prefix in dataConfig:
 
-    filenamePrefix = create_data_string(DIM, ell, nu, nSampBatch, prefix)
+    filenamePrefix = create_data_string(DIM, var, ell, nu, nSampBatch, prefix)
 
     inDir = os.path.join(baseDir, subDir)
     inDir = os.path.join(inDir, filenamePrefix)
@@ -33,7 +34,7 @@ for subDir, prefix in dataConfig:
 
     nBatch = len(csvFiles)
 
-    outFilename = create_data_string(DIM, ell, nu, nSampBatch,
+    outFilename = create_data_string(DIM, var, ell, nu, nSampBatch,
                                      prefix + "_ACCUMULATED") + f"_{nBatch}batches.csv"
 
     if not csvFiles:

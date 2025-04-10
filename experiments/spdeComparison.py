@@ -32,15 +32,16 @@ print(f"Filename ID set to: '{filenameID}'")
 
 # Parameters
 DIM = 2
-ell = 0.2
-nu = 3.
-nSamp = int(1e3)
+var = 0.1
+ell = 0.05
+nu = 1.
+nSamp = int(5e4)
 
 kappa = np.sqrt(2 * nu) / ell
 beta = 0.5 * (1. + nu)
 
 dofPerDim = [8, 16, 32, 64, 128, 256]
-oversampling = [1., 1.05, 1.1, 1.2, 1.4, 1.8]
+oversampling = [1., 1.25, 1.5, 2.]
 
 # used in estimation of average time per sample and avg memory current
 nAvg = 1000
@@ -66,13 +67,12 @@ def print_sampling_progress(n, nSamp, nUpdates=9):
         else:
             print(f"{n} realisations computed")
 
-
 def cov_fcn(r):
-    return matern_ptw(r, ell, nu)
+    return var * matern_ptw(r, ell, nu)
 
 
 def cov_ftrans_callable(s):
-    return matern_fourier_ptw(s, ell, nu, DIM)
+    return var * matern_fourier_ptw(s, ell, nu, DIM)
 
 
 osData = {
@@ -144,7 +144,7 @@ for nDof in dofPerDim:
 
     print(f"\n\n- Running DNA Sampling using SPDE approach")
 
-    dnaSPDERF = RandomField(DNASPDEEngine2d(ell, nu, nDof, 1.))
+    dnaSPDERF = RandomField(DNASPDEEngine2d(var, ell, nu, nDof, 1.))
     dnaSPDECov = CovarianceAccumulator(nDof)
 
     avgMem = 0.
@@ -200,7 +200,7 @@ for nDof in dofPerDim:
         print(f"oversampling width: {osWidth} degrees of freedom\n")
 
         spdeRF = RandomField(
-            SPDEEngine2d(ell, nu, nOsDof, alpha, useDirBC=[False, False])
+            SPDEEngine2d(var, ell, nu, nOsDof, alpha, useDirBC=[False, False])
         )
 
         spdeCov = spdeCovList[alphaIdx]
@@ -259,6 +259,9 @@ for nDof in dofPerDim:
     diagonalGrid = util.extract_diagonal_from_mesh(dnaSPDERF.engine.mesh)
     trueCov = evaluate_isotropic_covariance_1d(cov_fcn, diagonalGrid)
 
+    # l2ErrorDNAFourier = l2_error(dnaFourierCov.covariance  
+    # l2ErrorDNASPDE = 
+
     maxErrorDNAFourier = np.max(np.abs(trueCov - dnaFourierCov.covariance))
     maxErrorDNASPDE = np.max(np.abs(trueCov - dnaSPDECov.covariance))
 
@@ -296,7 +299,7 @@ experimentConfig = [
 
 for dataDir, prefix in experimentConfig:
 
-    dataString = create_data_string(DIM, ell, nu, nSamp, prefix)
+    dataString = create_data_string(DIM, var, ell, nu, nSamp, prefix)
 
     paramDir = dataString
     outDir = os.path.join("data", dataDir, paramDir)

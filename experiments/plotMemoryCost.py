@@ -10,9 +10,10 @@ from experiments.filename import create_data_string
 # =============================================================================
 
 DIM = 2
-ell = 0.2
-nu = 3.0
-nSampBatch = int(1e3)
+var = 1.0
+ell = 0.05
+nu = 1.0
+nSampBatch = int(1e2)
 nBatch = 5
 
 variables = [("memory", "mem"), ("cost", "cost")]
@@ -20,12 +21,8 @@ variables = [("memory", "mem"), ("cost", "cost")]
 for variable, prefix in variables: 
 
     baseDir = 'data'
-    fileStr = create_data_string(
-        DIM,
-        ell,
-        nu,
-        nSampBatch,
-        prefix + "_ACCUMULATED") + f"_{nBatch}batches.csv"
+    fileStr = create_data_string(DIM, var, ell, nu, nSampBatch,
+                prefix + "_ACCUMULATED") + f"_{nBatch}batches.csv"
     fileName = os.path.join(baseDir, fileStr)
 
     # =============================================================================

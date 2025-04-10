@@ -27,12 +27,13 @@ class SPDEEngine2d(SamplingEngine):
     DIM = 2
 
     def __init__(self, variance, corrLength, nu, nVertPerDim, alpha,
-                 useDirBC=[False, False], useDirectSolver=True):
+                 useDirBC=[False, False], cacheFactorisation=True, useDirectSolver=True):
 
         df.set_log_level(df.LogLevel.ERROR)
 
         self._sd = np.sqrt(variance)
         self._nGrid = nVertPerDim
+        self._cacheFactor = cacheFactorisation
 
         beta = 0.5 * nu + 0.25 * SPDEEngine2d.DIM
         self._betaInt = int(np.rint(beta))
@@ -67,7 +68,7 @@ class SPDEEngine2d(SamplingEngine):
         v = df.TestFunction(self._V)
         R = df.Constant(kappa * kappa)
 
-        a = df.inner(df.grad(u), df.grad(v)) * df.dx + R * u * v * df.dx
+        self._a = df.inner(df.grad(u), df.grad(v)) * df.dx + R * u * v * df.dx
         dirBCVal = df.Constant(0.)
 
         self._bc = df.DirichletBC(
@@ -77,20 +78,22 @@ class SPDEEngine2d(SamplingEngine):
                 x, useDirBC[0], useDirBC[1], delta)
         )
 
-        self._A = df.assemble(a)
-        self._A.ident_zeros()
-        self._bc.apply(self._A)
-
         if useDirectSolver:
-
             self._solver = df.LUSolver("umfpack")
-            self._solver.parameters["reuse_factorization"] = True
+        else:
+            self._solver = df.KrylovSolver("cg", "hypre_amg")
+
+        if self._cacheFactor:
+
+            self._A = df.assemble(self._a)
+            self._A.ident_zeros()
+            self._bc.apply(self._A)
+
             self._solver.set_operator(self._A)
 
         else:
+            self._A = None
 
-            self._solver = df.KrylovSolver("cg", "hypre_amg")
-            self._solver.set_operator(self._A)
 
         m = u * v * df.dx
         M = df.assemble(m)
@@ -107,6 +110,14 @@ class SPDEEngine2d(SamplingEngine):
         return self._mesh
 
     def generate_realisation(self):
+
+        if not self._cacheFactor:
+
+            self._A = df.assemble(self._a)
+            self._A.ident_zeros()
+            self._bc.apply(self._A)
+
+            self._solver.set_operator(self._A)
 
         fDofs = self._f.vector().get_local()
         fDofs[:] = self._sd * self._varScaling * self._H * standard_normal(self._V.dim())
