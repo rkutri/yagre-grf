@@ -1,7 +1,8 @@
 import numpy as np
+
 from scipy.fft import fft2, ifft2, fftshift
 from numpy.random import standard_normal
-import matplotlib.pyplot as plt
+
 from yagregrf.sampling.interface import SamplingEngine
 
 
@@ -10,80 +11,90 @@ from yagregrf.sampling.interface import SamplingEngine
 # by G.J.Lord, C.E. Powell and T. Shardlow
 class CirculantEmbedding2DEngine(SamplingEngine):
 
-    def __init__(self, cov_fourier_callable, vertPerDim,
+    def __init__(self, cov_callable, vertPerDim,
                  domExt=1., autotunePadding=True):
 
         self._n = vertPerDim
         self._h = domExt / vertPerDim
-
-        self._N = None
-        self._coeff = None
+        self._padding = 0
 
         self._performAutotune = autotunePadding
-        self._maxPadding = 8 * vertPerDim
+        self._maxPadding = 16 * vertPerDim
 
-    def _compute_reduced_covariance(self, cov_fourier_callable):
+        if self._padding > self._maxPadding:
+            raise RuntimeError(
+                "initial CE padding larger than maximal allowed padding")
 
-        Nred = 2. * self._n - 1.
+        self._coeff = self._compute_fft_coefficient(cov_callable)
 
-        self._reducedCov = np.zeros((Nred, Nred))
+    def _compute_reduced_covariance(self, cov_callable):
 
-        for i in range(Nred):
-            for j in range(Nred):
+        nExt = self._n + self._padding
+        nRed = 2 * nExt - 1
 
-                hx = (i - (self._n - 1)) * self._h
-                hy = (j - (self._n - 1)) * self._h
+        redCov = np.zeros((nRed, nRed))
 
-                self._reducedCov[i, j] = cov_fourier_callable(hx, hy)
+        for i in range(nRed):
+            for j in range(nRed):
 
-        return
+                hx = (i - (nExt - 1)) * self._h
+                hy = (j - (nExt - 1)) * self._h
+
+                redCov[i, j] = cov_callable(hx, hy)
+
+        return redCov
+
+    def _compute_lambda(self, cov_callable):
+
+        redCovExt = self._compute_reduced_covariance(cov_callable)
+
+        nExt = self._n + self._padding
+
+        redCovTilde = np.zeros((2 * nExt, 2 * nExt))
+        redCovTilde[1:2 * nExt, 1:2 * nExt] = redCovExt
+        redCovTilde = fftshift(redCovTilde)
+
+        NExt = (2 * nExt)**2
+
+        return NExt * ifft2(redCovTilde)
 
     def _embedding_is_positive_definite(self, freqs, tol=1e-12):
 
         d = freqs.ravel()
         dNeg = np.maximum(-d, 0.)
 
-        return np.max(dNeg) > tol
+        return np.max(dNeg) < tol
 
-    def _determine_valid_padding(self, redCov):
+    def _determine_valid_padding(self, cov_callable):
         """
         assuming the embedding without padding is not positive definite
         """
 
         isPosDef = False
 
-        padding = 0
         nextPadding = 2
 
         while not isPosDef and nextPadding <= self._maxPadding:
 
-            padding = nextPadding
+            self._padding = nextPadding
 
-            nExt = self._n + padding
-            NExt = nExt**2
-
-            redCovTilde = np.zeros((2 * nExt, 2 * nExt))
-            redCovTilde[1:2 * nExt, 1:2 * nExt] = redCov
-            redCovTilde = fftshift(redCovTilde)
-
-            Lambda = NExt * ifft2(redCovTilde)
+            Lambda = self._compute_lambda(cov_callable)
             isPosDef = self._embedding_is_positive_definite(Lambda)
 
-            nextPadding = padding * 2
+            nextPadding *= 2
 
         if not isPosDef:
             raise RuntimeError(
                 f"Exceeded maximal padding of {self._maxPadding}")
 
-        return Lambda, padding
+        return Lambda
 
-    def _determine_minimal_padding(redCov, initPadding, maxBisections=4):
+    def _determine_minimal_padding(self, cov_callable, maxBisections=4):
         """
         assumes that the initial padding leads to positive definiteness
         """
 
-        upper = initPadding
-
+        upper = self._padding
         lower = 0
         mid = 0
 
@@ -93,53 +104,47 @@ class CirculantEmbedding2DEngine(SamplingEngine):
 
             mid = int(0.5 * (lower + upper))
 
-            nExt = self._n + mid
-            NExt = nExt**2
+            self._padding = mid
 
-            midRedCov = np.zeros((2 * nExt, 2 * nExt))
-            midRedCov[1:2 * nExt, 1:2 * Next] = redCov
-            midRedCov = fftshift(midRedCov)
-
-            Lambda = NExt * ifft2(midRedCov)
+            Lambda = self._compute_lambda(cov_callable)
             isPosDef = self._embedding_is_positive_definite(Lambda)
 
             if isPosDef:
                 upper = mid
             else:
                 lower = mid
+                self._padding = upper
 
             iteration += 1
 
-        return Lambda, upper
+        return Lambda
 
-    def _compute_fft_frequencies(self, cov_fourier_callable):
+    def _compute_fft_coefficient(self, cov_callable):
 
-        redCov = self._compute_reduced_covariance(cov_fourier_callable)
+        Lambda = self._compute_lambda(cov_callable)
 
-        self._N = self._n**2
-        Lambda = self._N * ifft2(redCov)
-
+        # if embedding is not positive definite, introduce padding
         if not self._embedding_is_positive_definite(Lambda):
 
-            Lambda, padding = self._determine_valid_padding(redCov)
+            Lambda = self._determine_valid_padding(cov_callable)
 
-            # use bisection reduce the padding while remaining positive
+            # use bisection to reduce the padding while remaining positive
             # definite
             if self._performAutotune:
-                Lambda, padding = self._determine_minimal_padding(
-                    redCov, padding)
+                Lambda = self._determine_minimal_padding(cov_callable)
 
-        self._N = (self._n + padding)**2
-        self._coeff = np.sqrt(Lambda)
-        return
+        return np.sqrt(Lambda)
 
     def generate_realisation(self):
 
-        xi = standard_normal((self._n, self._n)) \
-            + 1.j * standard_normal((self._n, self._n))
+        nExt = 2 * (self._n + self._padding)
+        NExt = nExt**2
+
+        xi = standard_normal((nExt, nExt)) \
+            + 1.j * standard_normal((nExt, nExt))
         V = self._coeff * xi
 
-        z = fft2(V) / np.sqrt(self._N)
+        z = fft2(V) / np.sqrt(NExt)
         z = z.ravel()
 
         x = np.real(z)
