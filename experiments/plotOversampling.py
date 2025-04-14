@@ -10,28 +10,32 @@ from experiments.filename import create_data_string
 # =============================================================================
 
 DIM = 2
-var = 1.
+var = 0.1
 ell = 0.05
 nu = 1.0
-nSampBatch = int(1e2)
-nBatch = 5
+nSampBatch = int(5e4)
+nBatch = 6
+
 
 baseDir = 'data'
+
+errorType = "froError"
+
 fileStr = create_data_string(DIM, var, ell, nu, nSampBatch, "os_ACCUMULATED") \
-            + f"_{nBatch}batches.csv"
+    + f"_{nBatch}batches_" + errorType + ".csv"
 fileName = os.path.join(baseDir, fileStr)
 
 # =============================================================================
 # Plot Appearance Settings (variables)
 # =============================================================================
 
-lineWidth = 0.8         
-markerSize = 6          
-fontSizeLabel = 12      
-fontSizeTicks = 10      
-tickLabelSize = 8       
-fontSizeLegend = 8      
-legendMarkerSize = 4    
+lineWidth = 0.8
+markerSize = 6
+fontSizeLabel = 12
+fontSizeTicks = 10
+tickLabelSize = 8
+fontSizeLegend = 8
+legendMarkerSize = 4
 
 figWidth = 5.0  # inches
 figHeight = 5.0  # inches
@@ -55,7 +59,6 @@ with open(fileName, mode='r') as file:
     # first row contains mesh widths
     meshWidths = [float(x) for x in rows[0][1:]]
 
-
     for i in range(1, len(rows)):
 
         label = rows[i][0]
@@ -78,7 +81,7 @@ with open(fileName, mode='r') as file:
                 errorBars[method] = [float(x) for x in rows[i][1:]]
         else:
             if method not in errors:
-                errors[method] = [float(x) for x in rows[i][1:]] 
+                errors[method] = [float(x) for x in rows[i][1:]]
 
 
 # =============================================================================

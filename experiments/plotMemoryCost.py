@@ -10,32 +10,35 @@ from experiments.filename import create_data_string
 # =============================================================================
 
 DIM = 2
-var = 1.0
+var = 0.1
 ell = 0.05
 nu = 1.0
-nSampBatch = int(1e2)
-nBatch = 5
+nSampBatch = int(5e4)
+nBatch = 6
 
 variables = [("memory", "mem"), ("cost", "cost")]
 
-for variable, prefix in variables: 
+errorType = "froError"
+
+for variable, prefix in variables:
 
     baseDir = 'data'
     fileStr = create_data_string(DIM, var, ell, nu, nSampBatch,
-                prefix + "_ACCUMULATED") + f"_{nBatch}batches.csv"
+                                 prefix + "_ACCUMULATED") \
+                + f"_{nBatch}batches_" + errorType + ".csv"
     fileName = os.path.join(baseDir, fileStr)
 
     # =============================================================================
     # Plot Appearance Settings (variables)
     # =============================================================================
 
-    lineWidth = 0.8         
-    markerSize = 6          
-    fontSizeLabel = 12      
-    fontSizeTicks = 10      
-    tickLabelSize = 8       
-    fontSizeLegend = 8      
-    legendMarkerSize = 4    
+    lineWidth = 0.8
+    markerSize = 6
+    fontSizeLabel = 12
+    fontSizeTicks = 10
+    tickLabelSize = 8
+    fontSizeLegend = 8
+    legendMarkerSize = 4
 
     figWidth = 5.0  # inches
     figHeight = 5.0  # inches
@@ -74,7 +77,7 @@ for variable, prefix in variables:
                 if method not in variables:
                     variables[method] = [float(x) for x in row[1:]]
 
-            if variableName == "error":
+            if variableName == errorType:
                 if method not in errors:
                     errors[method] = [float(x) for x in row[1:]]
 
@@ -82,12 +85,11 @@ for variable, prefix in variables:
                 if method not in errorBars:
                     errorBars[method] = [float(x) for x in row[1:]]
 
-
     # =============================================================================
     # Define Plot Styles
     # =============================================================================
 
-    colors = {'SPDE_nFix': 'tab:blue', 'SPDE_osFix' : 'tab:purple',
+    colors = {'SPDE_nFix': 'tab:blue', 'SPDE_osFix': 'tab:purple',
               'DNA_fourier': 'tab:green', 'DNA_spde': 'tab:red'}
 
     linestyles = ['-', '--', '-.', ':']
@@ -122,7 +124,6 @@ for variable, prefix in variables:
             color=color,
             alpha=0.9
         )
-
 
     # =============================================================================
     # Draw Rate Indication Triangle
@@ -170,7 +171,6 @@ for variable, prefix in variables:
 
     # Set tick label sizes for both major and minor ticks on both axes
     ax.tick_params(axis='both', which='both', labelsize=tickLabelSize)
-
 
     # =============================================================================
     # Legend Setup

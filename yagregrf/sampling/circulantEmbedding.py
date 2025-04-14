@@ -65,7 +65,7 @@ class CirculantEmbedding2DEngine(SamplingEngine):
 
         return np.max(dNeg) < tol
 
-    def _determine_valid_padding(self, cov_callable):
+    def _determine_valid_lambda(self, cov_callable):
         """
         assuming the embedding without padding is not positive definite
         """
@@ -123,10 +123,11 @@ class CirculantEmbedding2DEngine(SamplingEngine):
 
         Lambda = self._compute_lambda(cov_callable)
 
-        # if embedding is not positive definite, introduce padding
         if not self._embedding_is_positive_definite(Lambda):
 
-            Lambda = self._determine_valid_padding(cov_callable)
+            print("initial embedding is not positive definite.")
+
+            Lambda = self._determine_valid_lambda(cov_callable)
 
             # use bisection to reduce the padding while remaining positive
             # definite
@@ -154,4 +155,19 @@ class CirculantEmbedding2DEngine(SamplingEngine):
 
 
 class ApproximateCirculantEmbeddingEngine(CirculantEmbeddingEngine):
-    pass
+
+    def __init__(self, cov_callable, vertPerDim, domExt=1., tol=1e-12):
+        super().__init__(cov_callable, vertPerDim, domExt, autotunePadding=False)
+        self._tol = tol
+
+    def _determine_valid_lambda(self, cov_callable):
+
+        Lambda = self._compute_lambda(cov_callable)
+
+        LambdaReal = np.real(Lambda)
+        LambdaImag = np.imag(Lambda)
+
+	LambdaReal[LambdaReal < self._tol] = 0.
+
+	return LambdaReal + 1.j * LambdaImag
+
