@@ -12,24 +12,21 @@ from experiments.filename import create_data_string
 DIM = 2
 var = 0.1
 ell = 0.2
-nu = 3.0
+nu = 3.
 nSampBatch = int(5e1)
 nBatch = 6
 
-
 baseDir = 'data'
-
-errorType = "maxError"
-
-fileStr = create_data_string(DIM, var, ell, nu, nSampBatch, "os_ACCUMULATED") \
-    + f"_{nBatch}batches_" + errorType + ".csv"
+fileStr = create_data_string(DIM, var, ell, nu, nSampBatch,
+                             "mv_ACCUMULATED") \
+    + f"_{nBatch}batches.csv"
 fileName = os.path.join(baseDir, fileStr)
 
 # =============================================================================
 # Plot Appearance Settings (variables)
 # =============================================================================
 
-lineWidth = 0.8
+lineWidth = 1.5
 markerSize = 6
 fontSizeLabel = 12
 fontSizeTicks = 10
@@ -45,61 +42,43 @@ figHeight = 5.0  # inches
 # =============================================================================
 
 methods = []
-meshWidths = []
-errors = {}
-errorBars = {}
 
-isErrorBar = False
+pos = []
+margVar = {}
 
 with open(fileName, mode='r') as file:
 
     reader = csv.reader(file)
     rows = list(reader)
 
-    # first row contains mesh widths
-    meshWidths = [float(x) for x in rows[0][1:]]
+    print(rows[0][0])
 
-    for i in range(1, len(rows)):
+    assert rows[0][0] == "position"
+    pos = [float(x) for x in rows[0][1:]]
 
-        label = rows[i][0]
-        print(label)
+    for row in rows[1:]:
 
-        if label.count('_') > 1:
+        method = row[0]
 
-            isErrorBar = True
-            method = label.rsplit('_', 1)[0]
-
-        else:
-            isErrorBar = False
-            method = label
+        print(method)
 
         if method not in methods:
             methods.append(method)
 
-        if isErrorBar:
-            if method not in errorBars:
-                errorBars[method] = [float(x) for x in rows[i][1:]]
-        else:
-            if method not in errors:
-                errors[method] = [float(x) for x in rows[i][1:]]
+        if method not in margVar:
+            margVar[method] = [float(x) for x in row[1:]]
 
 
 # =============================================================================
 # Define Plot Styles
 # =============================================================================
 
-dnaMethods = ["DNA_fourier", "DNA_spde"]
-spdeMethods = [m for m in methods if "SPDE_alpha" in m]
+colors = {'DNA_fourier': 'tab:green', 'SPDE': 'tab:blue',
+          'DNA_spde': 'tab:red'}
 
-dnaColors = {'DNA_fourier': 'tab:green', 'DNA_spde': 'tab:red'}
-spdeColor = 'tab:blue'
+linestyles = ['-', '--', '-.', ':', '--', '-.', ':']
 
-linestyles = ['-', '--', '-.', ':', (0, (3, 1, 1, 1)), (0, (3, 2, 1, 2))]
 
-markers = ['o', 's', 'D', '^', 'p', 'v']
-
-# =============================================================================
-# Create Figure and Axes
 # =============================================================================
 fig, ax = plt.subplots(figsize=(figWidth, figHeight))
 
@@ -108,41 +87,21 @@ fig, ax = plt.subplots(figsize=(figWidth, figHeight))
 # =============================================================================
 
 # Plot SPDE methods
-for i, method in enumerate(spdeMethods):
-    linestyle = linestyles[i]
-    marker = markers[i]
-    ax.errorbar(
-        meshWidths,
-        errors[method],
-        yerr=errorBars[method],
-        fmt=marker,
+for i, method in enumerate(methods):
+
+    linestyle = '--' if 'SPDE' not in method else linestyles[i - 2]
+    color = colors[method] if 'SPDE' not in method else colors['SPDE']
+    linewidth = 3 if 'SPDE' not in method else 1.5
+
+    ax.plot(
+        pos,
+        margVar[method],
+        linewidth=linewidth,
         linestyle=linestyle,
         label=method.replace("_", " "),
-        markersize=markerSize,
-        markeredgewidth=1.5,
-        elinewidth=lineWidth,
-        capsize=5,
-        color=spdeColor,
+        color=color,
         alpha=0.9
     )
-
-# Plot DNA methods
-for method in dnaMethods:
-    if method in errors:
-        ax.errorbar(
-            meshWidths,
-            errors[method],
-            yerr=errorBars[method],
-            fmt=markers[0],
-            linestyle=linestyles[0],
-            label=method.replace("_", " "),
-            markersize=markerSize,
-            markeredgewidth=1.5,
-            elinewidth=lineWidth,
-            capsize=5,
-            color=dnaColors[method],
-            alpha=0.9
-        )
 
 # =============================================================================
 # Draw Rate Indication Triangle
@@ -182,15 +141,12 @@ ax.text(
 # =============================================================================
 # Customize Axes
 # =============================================================================
-ax.set_xlabel('Mesh width $h$', fontsize=fontSizeLabel)
+ax.set_xlabel('position', fontsize=fontSizeLabel)
 ax.set_ylabel('Error estimate', fontsize=fontSizeLabel)
-ax.set_xscale('log')
-ax.set_yscale('log')
 ax.grid(True, which='both', linestyle='--', linewidth=0.5)
 
 # Set tick label sizes for both major and minor ticks on both axes
 ax.tick_params(axis='both', which='both', labelsize=tickLabelSize)
-
 
 # =============================================================================
 # Legend Setup
@@ -222,7 +178,7 @@ plt.tight_layout(rect=[0, 0, 0.85, 1])  # Reserve space for the legend
 ax.set_aspect('auto', adjustable='box')
 
 plt.savefig(
-    './spde_oversampling.pdf',
+    f"./spde_comparison_margVar.pdf",
     format='pdf',
     dpi=300,
     bbox_inches='tight')

@@ -11,9 +11,9 @@ from filename import create_data_string
 # Parameters
 DIM = 2
 var = 0.1
-ell = 0.05
-nu = 1.
-nSampBatch = int(5e4)
+ell = 0.2
+nu = 3.
+nSampBatch = int(5e1)
 
 errorTypes = ["maxError", "froError"]
 
@@ -22,7 +22,8 @@ for error in errorTypes:
     baseDir = 'data'
     dataConfig = [("oversampling", "os"),
                   ("memory", "mem"),
-                  ("cost", "cost")]
+                  ("cost", "cost"),
+                  ("marginalVariance", "mv")]
 
     for subDir, prefix in dataConfig:
 
@@ -39,7 +40,7 @@ for error in errorTypes:
         nBatch = len(csvFiles)
 
         outFilename = create_data_string(DIM, var, ell, nu, nSampBatch,
-               prefix + "_ACCUMULATED") + f"_{nBatch}batches_" + error + ".csv"
+                                         prefix + "_ACCUMULATED") + f"_{nBatch}batches_" + error + ".csv"
 
         if not csvFiles:
             raise RuntimeError(
@@ -48,6 +49,7 @@ for error in errorTypes:
 
         methods = []
         variableData = {}
+        margVarSamples = {}
         errorSamples = {}
         errorBars = {}
 
@@ -76,6 +78,24 @@ for error in errorTypes:
                         errorSamples[method].append(
                             [float(x) for x in row[1:]])
 
+                elif prefix == "mv":
+
+                    pos = [float(x) for x in rows[0][1:]]
+                    variableData["position"] = pos
+
+                    for row in rows[1:]:
+
+                        method = row[0]
+
+                        if method not in methods:
+                            methods.append(method)
+
+                        if method not in margVarSamples:
+                            margVarSamples[method] = []
+
+                        margVarSamples[method].append(
+                            [float(var) for var in row[1:]])
+
                 else:
 
                     for row in rows:
@@ -99,13 +119,19 @@ for error in errorTypes:
                         else:
                             variableData[method] = [float(x) for x in row[1:]]
 
-        averagedErrors = {method: np.mean(errorSamples[method], axis=0).tolist()
-                          for method in methods}
+        if prefix == "mv":
+            averagedMargVar = {
+                method: np.mean(
+                    margVarSamples[method],
+                    axis=0).tolist() for method in methods}
+        else:
+            averagedErrors = {method: np.mean(errorSamples[method], axis=0).tolist()
+                              for method in methods}
 
-        # confidence interval ~ 95%
-        ciFactor = 1.96
-        errorBars = {method: (ciFactor * np.std(errorSamples[method],
-                                                axis=0)).tolist() for method in methods}
+            # confidence interval ~ 95%
+            ciFactor = 1.96
+            errorBars = {method: (ciFactor * np.std(errorSamples[method],
+                                                    axis=0)).tolist() for method in methods}
 
         # Write to output CSV
         with open(os.path.join(baseDir, outFilename), mode='w', newline='') as file:
@@ -122,6 +148,13 @@ for error in errorTypes:
 
                     barRow = method + "_bars"
                     writer.writerow([barRow] + errorBars[method])
+
+            elif prefix == "mv":
+
+                writer.writerow(["position"] + variableData["position"])
+
+                for method in methods:
+                    writer.writerow([method] + averagedMargVar[method])
 
             else:
 

@@ -38,15 +38,19 @@ print(f"Filename ID set to: '{filenameID}'")
 # Parameters
 DIM = 2
 var = 0.1
-ell = 0.05
-nu = 1.
-nSamp = int(5e4)
+ell = 0.2
+nu = 3.
+nSamp = int(5e1)
 
 kappa = np.sqrt(2. * nu) / ell
 beta = 0.5 * (1. + nu)
 
-dofPerDim = [8, 16, 32, 64, 128, 256]
-oversampling = [1., 1.25, 1.5, 2.]
+dofPerDim = [16, 32, 64, 128, 256]
+
+deltas = np.array([0., 2., 4.]) * ell
+# 2 delta in each direction
+oversampling = [1. + 2. * delta for delta in deltas]
+print(f"oversampling deltas for this run: {deltas}")
 
 # used in estimation of average time per sample and avg memory current
 nAvg = 1000
@@ -55,9 +59,8 @@ nAvg = 1000
 nFixedMV = dofPerDim[-1]
 
 # fixed oversampling size used when decreasing mesh width. Corresponds
-# to 2 times correlation length heuristic. Use oversampling value which
-# is closest to the heuristic
-osHeuristic = 1. + 2. * DIM * ell  # 2 ell in each direction/dimension
+# to 2 times correlation length heuristic.
+osHeuristic = 1. + 4. * ell  # 2 ell in each direction/dimension
 osFixedSPDE = min(oversampling, key=lambda x: abs(x - osHeuristic))
 
 
@@ -237,7 +240,7 @@ for nDof in dofPerDim:
 
             print_sampling_progress(n, nSamp)
 
-            if np.abs(osFixedSPDE - alpha) < 1e-8 and n < nAvg:
+            if n < nAvg:
 
                 tracemalloc.start()
                 startTime = time.perf_counter()
@@ -268,10 +271,10 @@ for nDof in dofPerDim:
             if nDof == nFixedMV:
                 spdeMV.update(diagSlice)
 
-        if np.abs(osFixedSPDE - alpha) < 1e-8:
+        print(f"\naverage peak memory usage: {avgMem} MB")
+        print(f"Average time per realisation: {avgCost}")
 
-            print(f"\naverage peak memory usage: {avgMem} MB")
-            print(f"Average time per realisation: {avgCost}")
+        if np.abs(osFixedSPDE - alpha) < 1e-8:
 
             memData["SPDE_osFix"]["memory"].append(avgMem)
             cData["SPDE_osFix"]["cost"].append(avgCost)
@@ -341,15 +344,21 @@ experimentConfig = [
     ("marginalVariance", "mv")
 ]
 
+errorTypes = ["maxError", "froError"]
+
 for dataVariable, prefix in experimentConfig:
 
     dataString = create_data_string(DIM, var, ell, nu, nSamp, prefix)
 
-    for errorType in ["maxError", "froError"]:
+    for error in errorTypes:
 
         paramDir = dataString
 
-        outDir = os.path.join("data", dataVariable, errorType, paramDir)
+        if prefix == "mv":
+            outDir = os.path.join("data", dataVariable, paramDir)
+        else:
+            outDir = os.path.join("data", dataVariable, error, paramDir)
+
         os.makedirs(outDir, exist_ok=True)
 
         filename = os.path.join(outDir, dataString + f"_{filenameID}.csv")
@@ -363,13 +372,13 @@ for dataVariable, prefix in experimentConfig:
                 writer.writerow(["mesh_widths"] + [1. / n for n in dofPerDim])
                 writer.writerow(
                     ["DNA_fourier"] +
-                    osData[errorType]["DNA_fourier"])
-                writer.writerow(["DNA_spde"] + osData[errorType]["DNA_spde"])
+                    osData[error]["DNA_fourier"])
+                writer.writerow(["DNA_spde"] + osData[error]["DNA_spde"])
 
                 for i, alpha in enumerate(oversampling):
                     writer.writerow(
                         [f"SPDE_alpha{int(100*alpha)}"] +
-                        osData[errorType]["SPDE"][i])
+                        osData[error]["SPDE"][i])
 
             if prefix == "mem":
 
@@ -377,21 +386,21 @@ for dataVariable, prefix in experimentConfig:
                     ["DNA_fourier_memory"] +
                     memData["DNA_fourier"]["memory"])
                 writer.writerow(
-                    ["DNA_fourier_" + errorType] +
-                    memData["DNA_fourier"][errorType])
+                    ["DNA_fourier_" + error] +
+                    memData["DNA_fourier"][error])
 
                 writer.writerow(
                     ["DNA_spde_memory"] +
                     memData["DNA_spde"]["memory"])
-                writer.writerow(["DNA_spde_" + errorType] +
-                                memData["DNA_spde"][errorType])
+                writer.writerow(["DNA_spde_" + error] +
+                                memData["DNA_spde"][error])
 
                 writer.writerow(
                     ["SPDE_osFix_memory"] +
                     memData["SPDE_osFix"]["memory"])
                 writer.writerow(
-                    ["SPDE_osFix_" + errorType] +
-                    memData["SPDE_osFix"][errorType])
+                    ["SPDE_osFix_" + error] +
+                    memData["SPDE_osFix"][error])
 
             if prefix == "cost":
 
@@ -399,21 +408,21 @@ for dataVariable, prefix in experimentConfig:
                     ["DNA_fourier_cost"] +
                     cData["DNA_fourier"]["cost"])
                 writer.writerow(
-                    ["DNA_fourier_" + errorType] +
-                    cData["DNA_fourier"][errorType])
+                    ["DNA_fourier_" + error] +
+                    cData["DNA_fourier"][error])
 
                 writer.writerow(["DNA_spde_cost"] + cData["DNA_spde"]["cost"])
-                writer.writerow(["DNA_spde_" + errorType] +
-                                cData["DNA_spde"][errorType])
+                writer.writerow(["DNA_spde_" + error] +
+                                cData["DNA_spde"][error])
 
                 writer.writerow(
                     ["SPDE_osFix_cost"] +
                     cData["SPDE_osFix"]["cost"])
                 writer.writerow(
-                    ["SPDE_osFix_" + errorType] +
-                    cData["SPDE_osFix"][errorType])
+                    ["SPDE_osFix_" + error] +
+                    cData["SPDE_osFix"][error])
 
-            if prefix == "mv":
+            if prefix == "mv" and error == errorTypes[0]:
 
                 writer.writerow(["position"] + mvData["pos"].tolist())
 

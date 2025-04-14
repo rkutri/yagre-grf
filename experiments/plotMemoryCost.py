@@ -11,21 +11,21 @@ from experiments.filename import create_data_string
 
 DIM = 2
 var = 0.1
-ell = 0.05
-nu = 1.0
-nSampBatch = int(5e4)
+ell = 0.2
+nu = 3.0
+nSampBatch = int(5e1)
 nBatch = 6
 
 variables = [("memory", "mem"), ("cost", "cost")]
 
-errorType = "froError"
+errorType = "maxError"
 
 for variable, prefix in variables:
 
     baseDir = 'data'
     fileStr = create_data_string(DIM, var, ell, nu, nSampBatch,
                                  prefix + "_ACCUMULATED") \
-                + f"_{nBatch}batches_" + errorType + ".csv"
+        + f"_{nBatch}batches_" + errorType + ".csv"
     fileName = os.path.join(baseDir, fileStr)
 
     # =============================================================================
