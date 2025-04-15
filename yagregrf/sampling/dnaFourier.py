@@ -7,7 +7,7 @@ from yagregrf.utility.series import sin_series, cos_series
 from yagregrf.utility.evaluation import norm
 
 
-class DNAFourierEngine1d(SamplingEngine):
+class DNAFourierEngine1D(SamplingEngine):
 
     def __init__(self, cov_fourier_callable, nVertices, scaling=1.0):
 
@@ -33,7 +33,7 @@ class DNAFourierEngine1d(SamplingEngine):
         return (dirEval + neuEval) / sqrt(2. * self._alpha)
 
 
-class DNAFourierEngine2d(SamplingEngine):
+class DNAFourierEngine2D(SamplingEngine):
 
     def __init__(self, cov_fourier_callable, vertPerDim, scaling=1.0):
 

@@ -5,7 +5,7 @@ from numpy.random import standard_normal
 from yagregrf.sampling.interface import SamplingEngine
 
 
-def on_dirichlet_boundary_2d(x, dir0, dir1, delta, TOL=1e-8):
+def on_dirichlet_boundary_2D(x, dir0, dir1, delta, TOL=1e-8):
     if dir0:
         if x[0] + delta < TOL or x[0] > 1. + delta - TOL:
             return True
@@ -22,7 +22,7 @@ def white_noise_factor(M, V):
     return 1. / np.sqrt(H)
 
 
-class SPDEEngine2d(SamplingEngine):
+class SPDEEngine2D(SamplingEngine):
 
     DIM = 2
 
@@ -35,7 +35,7 @@ class SPDEEngine2d(SamplingEngine):
         self._nGrid = nVertPerDim
         self._cacheFactor = cacheFactorisation
 
-        beta = 0.5 * nu + 0.25 * SPDEEngine2d.DIM
+        beta = 0.5 * nu + 0.25 * SPDEEngine2D.DIM
         self._betaInt = int(np.rint(beta))
 
         if np.abs(beta - self._betaInt) > 1e-8:
@@ -74,7 +74,7 @@ class SPDEEngine2d(SamplingEngine):
         self._bc = df.DirichletBC(
             self._V,
             dirBCVal,
-            lambda x: on_dirichlet_boundary_2d(
+            lambda x: on_dirichlet_boundary_2D(
                 x, useDirBC[0], useDirBC[1], delta)
         )
 

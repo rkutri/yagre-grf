@@ -1,10 +1,10 @@
 from numpy import zeros
 
 from yagregrf.sampling.interface import SamplingEngine
-from yagregrf.sampling.spde import SPDEEngine2d
+from yagregrf.sampling.spde import SPDEEngine2D
 
 
-class DNASPDEEngine2d(SamplingEngine):
+class DNASPDEEngine2D(SamplingEngine):
 
     def __init__(self, variance, corrLength, nu, nVertPerDim,
                  alpha, cacheFactorisation=True):
@@ -13,13 +13,13 @@ class DNASPDEEngine2d(SamplingEngine):
         self._alpha = alpha
 
         self._engines = [
-            SPDEEngine2d(variance, corrLength, nu, nVertPerDim, alpha,
+            SPDEEngine2D(variance, corrLength, nu, nVertPerDim, alpha,
                          [False, False], cacheFactorisation),
-            SPDEEngine2d(variance, corrLength, nu, nVertPerDim, alpha,
+            SPDEEngine2D(variance, corrLength, nu, nVertPerDim, alpha,
                          [False, True], cacheFactorisation),
-            SPDEEngine2d(variance, corrLength, nu, nVertPerDim, alpha,
+            SPDEEngine2D(variance, corrLength, nu, nVertPerDim, alpha,
                          [True, False], cacheFactorisation),
-            SPDEEngine2d(variance, corrLength, nu, nVertPerDim, alpha,
+            SPDEEngine2D(variance, corrLength, nu, nVertPerDim, alpha,
                          [True, True], cacheFactorisation)]
 
     @property
