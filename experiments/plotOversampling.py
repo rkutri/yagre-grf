@@ -13,11 +13,12 @@ DIM = 2
 var = 0.1
 ell = 0.05
 nu = 1.0
-nSampBatch = int(5e1)
+nSampBatch = int(5e2)
 nBatch = 5
 
 
-baseDir = 'data'
+# baseDir = 'data'
+baseDir = os.path.join('experiments', 'publicationData')
 
 errorType = "maxError"
 

@@ -15,12 +15,11 @@ class DNAFourierEngine1d(SamplingEngine):
             raise ValueError("Grid must contain at least 3 points")
 
         self._nGrid = nVertices
-
         self._alpha = scaling
         self._detCoeff = self.compute_coefficient(cov_fourier_callable)
 
     def compute_coefficient(self, ftrans_fcn):
-        return sqrt([ftrans_fcn(m / (2. * self._alpha))
+        return sqrt([ftrans_fcn([m / (2. * self._alpha)])
                      for m in range(self._nGrid - 1)])
 
     def generate_realisation(self):
@@ -59,10 +58,10 @@ class DNAFourierEngine2d(SamplingEngine):
 
         fourierEval = zeros((nDofInner + 1, nDofInner + 1))
 
-        for i in range(nDofInner):
-            for j in range(nDofInner):
-                fourierEval[i, j] = ftrans_fcn(
-                    norm([i, j]) / (2. * self._alpha))
+        for i in range(nDofInner + 1):
+            for j in range(nDofInner + 1):
+                s = [i / (2. * self._alpha), j / (2. * self._alpha)]
+                fourierEval[i, j] = ftrans_fcn(s)
 
         return sqrt(fourierEval)
 

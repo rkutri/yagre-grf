@@ -40,7 +40,7 @@ DIM = 2
 var = 0.1
 ell = 0.05
 nu = 1.
-nSamp = int(5e4)
+nSamp = int(5e2)
 
 kappa = np.sqrt(2. * nu) / ell
 beta = 0.5 * (1. + nu)
@@ -62,6 +62,8 @@ nFixedMV = dofPerDim[-1]
 # to 2 times correlation length heuristic.
 osHeuristic = 1. + 4. * ell  # 2 ell in each direction/dimension
 osFixedSPDE = min(oversampling, key=lambda x: abs(x - osHeuristic))
+
+dataBaseDir = os.path.join('experiments', 'publicationData')
 
 
 def print_sampling_progress(n, nSamp, nUpdates=9):
@@ -358,9 +360,9 @@ for dataVariable, prefix in experimentConfig:
         dataString = create_data_string(DIM, var, ell, nu, nSamp, prefix)
 
         if prefix == "mv":
-            outDir = os.path.join("data", dataVariable, dataString)
+            outDir = os.path.join(dataBaseDir, dataVariable, dataString)
         else:
-            outDir = os.path.join("data", dataVariable, error, dataString)
+            outDir = os.path.join(dataBaseDir, dataVariable, error, dataString)
 
         os.makedirs(outDir, exist_ok=True)
 

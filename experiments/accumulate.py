@@ -9,11 +9,12 @@ DIM = 2
 var = 0.1
 ell = 0.05
 nu = 1.
-nSampBatch = int(1e1)
+nSampBatch = int(5e2)
 
 errorTypes = ["maxError", "froError"]
 
-baseDir = 'data'
+#baseDir = 'data'
+baseDir = os.path.join('experiments', 'publicationData')
 dataConfig = [("oversampling", "os"),
               ("memory", "mem"),
               ("cost", "cost"),

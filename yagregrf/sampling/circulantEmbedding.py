@@ -11,7 +11,7 @@ from yagregrf.sampling.interface import SamplingEngine
 # by G.J.Lord, C.E. Powell and T. Shardlow
 class CirculantEmbedding2DEngine(SamplingEngine):
 
-    def __init__(self, cov_callable, vertPerDim,
+    def __init__(self, cov_ptw_callable, vertPerDim,
                  domExt=1., autotunePadding=True):
 
         self._n = vertPerDim
@@ -25,9 +25,9 @@ class CirculantEmbedding2DEngine(SamplingEngine):
             raise RuntimeError(
                 "initial CE padding larger than maximal allowed padding")
 
-        self._coeff = self._compute_fft_coefficient(cov_callable)
+        self._coeff = self._compute_fft_coefficient(cov_ptw_callable)
 
-    def _compute_reduced_covariance(self, cov_callable):
+    def _compute_reduced_covariance(self, cov_ptw_callable):
 
         nExt = self._n + self._padding
         nRed = 2 * nExt - 1
@@ -40,13 +40,13 @@ class CirculantEmbedding2DEngine(SamplingEngine):
                 hx = (i - (nExt - 1)) * self._h
                 hy = (j - (nExt - 1)) * self._h
 
-                redCov[i, j] = cov_callable(hx, hy)
+                redCov[i, j] = cov_ptw_callable(np.array([hx, hy]))
 
         return redCov
 
-    def _compute_lambda(self, cov_callable):
+    def _compute_lambda(self, cov_ptw_callable):
 
-        redCovExt = self._compute_reduced_covariance(cov_callable)
+        redCovExt = self._compute_reduced_covariance(cov_ptw_callable)
 
         nExt = self._n + self._padding
 
@@ -65,7 +65,7 @@ class CirculantEmbedding2DEngine(SamplingEngine):
 
         return np.max(dNeg) < tol
 
-    def _determine_valid_lambda(self, cov_callable):
+    def _determine_valid_lambda(self, cov_ptw_callable):
         """
         assuming the embedding without padding is not positive definite
         """
@@ -78,7 +78,7 @@ class CirculantEmbedding2DEngine(SamplingEngine):
 
             self._padding = nextPadding
 
-            Lambda = self._compute_lambda(cov_callable)
+            Lambda = self._compute_lambda(cov_ptw_callable)
             isPosDef = self._embedding_is_positive_definite(Lambda)
 
             nextPadding *= 2
@@ -89,7 +89,7 @@ class CirculantEmbedding2DEngine(SamplingEngine):
 
         return Lambda
 
-    def _determine_minimal_padding(self, cov_callable, maxBisections=4):
+    def _determine_minimal_padding(self, cov_ptw_callable, maxBisections=4):
         """
         assumes that the initial padding leads to positive definiteness
         """
@@ -106,7 +106,7 @@ class CirculantEmbedding2DEngine(SamplingEngine):
 
             self._padding = mid
 
-            Lambda = self._compute_lambda(cov_callable)
+            Lambda = self._compute_lambda(cov_ptw_callable)
             isPosDef = self._embedding_is_positive_definite(Lambda)
 
             if isPosDef:
@@ -119,20 +119,20 @@ class CirculantEmbedding2DEngine(SamplingEngine):
 
         return Lambda
 
-    def _compute_fft_coefficient(self, cov_callable):
+    def _compute_fft_coefficient(self, cov_ptw_callable):
 
-        Lambda = self._compute_lambda(cov_callable)
+        Lambda = self._compute_lambda(cov_ptw_callable)
 
         if not self._embedding_is_positive_definite(Lambda):
 
             print("initial embedding is not positive definite.")
 
-            Lambda = self._determine_valid_lambda(cov_callable)
+            Lambda = self._determine_valid_lambda(cov_ptw_callable)
 
             # use bisection to reduce the padding while remaining positive
             # definite
             if self._performAutotune:
-                Lambda = self._determine_minimal_padding(cov_callable)
+                Lambda = self._determine_minimal_padding(cov_ptw_callable)
 
         return np.sqrt(Lambda)
 
@@ -154,20 +154,19 @@ class CirculantEmbedding2DEngine(SamplingEngine):
         return x, y
 
 
-class ApproximateCirculantEmbeddingEngine(CirculantEmbeddingEngine):
+class ApproximateCirculantEmbeddingEngine(CirculantEmbedding2DEngine):
 
-    def __init__(self, cov_callable, vertPerDim, domExt=1., tol=1e-12):
-        super().__init__(cov_callable, vertPerDim, domExt, autotunePadding=False)
+    def __init__(self, cov_ptw_callable, vertPerDim, domExt=1., tol=1e-12):
+        super().__init__(cov_ptw_callable, vertPerDim, domExt, autotunePadding=False)
         self._tol = tol
 
-    def _determine_valid_lambda(self, cov_callable):
+    def _determine_valid_lambda(self, cov_ptw_callable):
 
-        Lambda = self._compute_lambda(cov_callable)
+        Lambda = self._compute_lambda(cov_ptw_callable)
 
         LambdaReal = np.real(Lambda)
         LambdaImag = np.imag(Lambda)
 
-	LambdaReal[LambdaReal < self._tol] = 0.
+        LambdaReal[LambdaReal < self._tol] = 0.
 
-	return LambdaReal + 1.j * LambdaImag
-
+        return LambdaReal + 1.j * LambdaImag
