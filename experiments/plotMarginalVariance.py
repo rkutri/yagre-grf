@@ -11,10 +11,10 @@ from experiments.filename import create_data_string
 
 DIM = 2
 var = 0.1
-ell = 0.2
-nu = 3.
+ell = 0.05
+nu = 1.
 nSampBatch = int(5e1)
-nBatch = 6
+nBatch = 5
 
 baseDir = 'data'
 fileStr = create_data_string(DIM, var, ell, nu, nSampBatch,

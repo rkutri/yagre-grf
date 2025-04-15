@@ -38,9 +38,9 @@ print(f"Filename ID set to: '{filenameID}'")
 # Parameters
 DIM = 2
 var = 0.1
-ell = 0.2
-nu = 3.
-nSamp = int(5e1)
+ell = 0.05
+nu = 1.
+nSamp = int(5e4)
 
 kappa = np.sqrt(2. * nu) / ell
 beta = 0.5 * (1. + nu)
@@ -346,18 +346,21 @@ experimentConfig = [
 
 errorTypes = ["maxError", "froError"]
 
+
 for dataVariable, prefix in experimentConfig:
 
-    dataString = create_data_string(DIM, var, ell, nu, nSamp, prefix)
+    for i, error in enumerate(errorTypes):
 
-    for error in errorTypes:
+        # Skip mv for all but the first error type
+        if prefix == "mv" and i > 0:
+            continue
 
-        paramDir = dataString
+        dataString = create_data_string(DIM, var, ell, nu, nSamp, prefix)
 
         if prefix == "mv":
-            outDir = os.path.join("data", dataVariable, paramDir)
+            outDir = os.path.join("data", dataVariable, dataString)
         else:
-            outDir = os.path.join("data", dataVariable, error, paramDir)
+            outDir = os.path.join("data", dataVariable, error, dataString)
 
         os.makedirs(outDir, exist_ok=True)
 
@@ -370,62 +373,52 @@ for dataVariable, prefix in experimentConfig:
             if prefix == "os":
 
                 writer.writerow(["mesh_widths"] + [1. / n for n in dofPerDim])
-                writer.writerow(
-                    ["DNA_fourier"] +
-                    osData[error]["DNA_fourier"])
+                writer.writerow(["DNA_fourier"] + osData[error]["DNA_fourier"])
                 writer.writerow(["DNA_spde"] + osData[error]["DNA_spde"])
 
                 for i, alpha in enumerate(oversampling):
                     writer.writerow(
                         [f"SPDE_alpha{int(100*alpha)}"] +
-                        osData[error]["SPDE"][i])
+                        osData[error]["SPDE"][i]
+                    )
 
-            if prefix == "mem":
+            elif prefix == "mem":
 
                 writer.writerow(
                     ["DNA_fourier_memory"] +
                     memData["DNA_fourier"]["memory"])
-                writer.writerow(
-                    ["DNA_fourier_" + error] +
-                    memData["DNA_fourier"][error])
-
+                writer.writerow(["DNA_fourier_" + error] +
+                                memData["DNA_fourier"][error])
                 writer.writerow(
                     ["DNA_spde_memory"] +
                     memData["DNA_spde"]["memory"])
                 writer.writerow(["DNA_spde_" + error] +
                                 memData["DNA_spde"][error])
-
                 writer.writerow(
                     ["SPDE_osFix_memory"] +
                     memData["SPDE_osFix"]["memory"])
-                writer.writerow(
-                    ["SPDE_osFix_" + error] +
-                    memData["SPDE_osFix"][error])
+                writer.writerow(["SPDE_osFix_" + error] +
+                                memData["SPDE_osFix"][error])
 
-            if prefix == "cost":
+            elif prefix == "cost":
 
                 writer.writerow(
                     ["DNA_fourier_cost"] +
                     cData["DNA_fourier"]["cost"])
-                writer.writerow(
-                    ["DNA_fourier_" + error] +
-                    cData["DNA_fourier"][error])
-
+                writer.writerow(["DNA_fourier_" + error] +
+                                cData["DNA_fourier"][error])
                 writer.writerow(["DNA_spde_cost"] + cData["DNA_spde"]["cost"])
                 writer.writerow(["DNA_spde_" + error] +
                                 cData["DNA_spde"][error])
-
                 writer.writerow(
                     ["SPDE_osFix_cost"] +
                     cData["SPDE_osFix"]["cost"])
-                writer.writerow(
-                    ["SPDE_osFix_" + error] +
-                    cData["SPDE_osFix"][error])
+                writer.writerow(["SPDE_osFix_" + error] +
+                                cData["SPDE_osFix"][error])
 
-            if prefix == "mv" and error == errorTypes[0]:
+            elif prefix == "mv":
 
                 writer.writerow(["position"] + mvData["pos"].tolist())
-
                 writer.writerow(
                     ["DNA_fourier"] +
                     mvData["DNA_fourier"].tolist())
