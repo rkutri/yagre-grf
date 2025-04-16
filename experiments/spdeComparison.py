@@ -9,9 +9,9 @@ import experiments.scriptUtility as util
 
 from numpy.linalg import norm
 
-from yagregrf.sampling.spde import SPDEEngine2d
-from yagregrf.sampling.dnaSPDE import DNASPDEEngine2d
-from yagregrf.sampling.dnaFourier import DNAFourierEngine2d
+from yagregrf.sampling.spde import SPDEEngine2D
+from yagregrf.sampling.dnaSPDE import DNASPDEEngine2D
+from yagregrf.sampling.dnaFourier import DNAFourierEngine2D
 from yagregrf.utility.covariances import matern_ptw, matern_fourier_ptw
 from yagregrf.utility.accumulation import CovarianceAccumulator, MarginalVarianceAccumulator
 from yagregrf.utility.evaluation import evaluate_isotropic_covariance_1d
@@ -40,7 +40,7 @@ DIM = 2
 var = 0.1
 ell = 0.05
 nu = 1.
-nSamp = int(5e2)
+nSamp = int(5e4)
 
 kappa = np.sqrt(2. * nu) / ell
 beta = 0.5 * (1. + nu)
@@ -127,7 +127,7 @@ for nDof in dofPerDim:
 
     print(f"\n\n- Running DNA Sampling in Fourier basis")
 
-    dnaFourierRF = DNAFourierEngine2d(cov_ftrans_callable, nDof)
+    dnaFourierRF = DNAFourierEngine2D(cov_ftrans_callable, nDof)
     dnaFourierCov = CovarianceAccumulator(nDof)
     dnaFourierMV = MarginalVarianceAccumulator(nDof)
 
@@ -171,7 +171,7 @@ for nDof in dofPerDim:
 
     print(f"\n\n- Running DNA Sampling using SPDE approach")
 
-    dnaSPDERF = DNASPDEEngine2d(var, ell, nu, nDof, 1.)
+    dnaSPDERF = DNASPDEEngine2D(var, ell, nu, nDof, 1.)
     dnaSPDECov = CovarianceAccumulator(nDof)
     dnaSPDEMV = MarginalVarianceAccumulator(nDof)
 
@@ -229,7 +229,7 @@ for nDof in dofPerDim:
 
         print(f"oversampling width: {osWidth} degrees of freedom\n")
 
-        spdeRF = SPDEEngine2d(var, ell, nu, nOsDof, alpha,
+        spdeRF = SPDEEngine2D(var, ell, nu, nOsDof, alpha,
                               useDirBC=[False, False])
 
         spdeCov = spdeCovList[alphaIdx]

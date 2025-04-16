@@ -1,5 +1,4 @@
 import numpy as np
-
 from scipy.fft import fft2, ifft2, fftshift
 from numpy.random import standard_normal
 
@@ -7,15 +6,12 @@ from yagregrf.sampling.interface import SamplingEngine
 from yagregrf.utility.evaluation import norm
 
 
-# Adapted from Algorithm 7.6 of
-# "An Introduction to Computational Stochastic PDEs"
-# by G.J.Lord, C.E. Powell and T. Shardlow
 class CirculantEmbedding2DEngine(SamplingEngine):
 
     def __init__(self, cov_ptw_callable, vertPerDim,
                  domExt=1., autotunePadding=True):
 
-        self._nGrid = vertPerDim
+        self._nGrid = vertPerDim  # matches n1 = n2
         self._n = vertPerDim + 1
         self._h = domExt / vertPerDim
         self._padding = 0
@@ -38,10 +34,8 @@ class CirculantEmbedding2DEngine(SamplingEngine):
 
         for i in range(nRed):
             for j in range(nRed):
-
                 x = (i - (nExt - 1)) * self._h
                 y = (j - (nExt - 1)) * self._h
-
                 redCov[i, j] = cov_ptw_callable(norm([x, y]))
 
         return redCov
@@ -51,35 +45,30 @@ class CirculantEmbedding2DEngine(SamplingEngine):
         redCovExt = self._compute_reduced_covariance(cov_ptw_callable)
 
         nExt = self._n + self._padding
-
         redCovTilde = np.zeros((2 * nExt, 2 * nExt))
         redCovTilde[1:2 * nExt, 1:2 * nExt] = redCovExt
         redCovTilde = fftshift(redCovTilde)
 
         NExt = (2 * nExt)**2
-
         return NExt * ifft2(redCovTilde)
 
-    def _embedding_is_positive_definite(self, freqs, tol=1e-12):
-
+    def _embedding_is_positive_definite(self, freqs, tol=1e-10):
         d = freqs.ravel()
-        dNeg = np.maximum(-d, 0.)
 
-        return np.max(dNeg) < tol
+        dReal = np.real(d)
+        dImag = np.imag(d)
+
+        dNeg = np.maximum(-dReal, 0.)
+
+        return np.max(dNeg) < tol and np.all(dImag < tol)
 
     def _determine_valid_lambda(self, cov_ptw_callable):
-        """
-        assuming the embedding without padding is not positive definite
-        """
 
         isPosDef = False
-
         nextPadding = 2
 
         while not isPosDef and nextPadding <= self._maxPadding:
-
             print(f"check definiteness for padding={nextPadding}")
-
             self._padding = nextPadding
 
             Lambda = self._compute_lambda(cov_ptw_callable)
@@ -97,78 +86,73 @@ class CirculantEmbedding2DEngine(SamplingEngine):
         return Lambda
 
     def _determine_minimal_padding(self, cov_ptw_callable, maxBisections=4):
-        """
-        assumes that the initial padding leads to positive definiteness
-        """
+
+        print("determining minimal padding")
+
+        initPadding = self._padding
 
         upper = self._padding
         lower = 0
-        mid = 0
-
         iteration = 0
 
         while upper > lower and iteration < maxBisections:
 
-            mid = int(0.5 * (lower + upper))
-
+            mid = int(np.rint(0.5 * (lower + upper)))
             self._padding = mid
 
             Lambda = self._compute_lambda(cov_ptw_callable)
             isPosDef = self._embedding_is_positive_definite(Lambda)
 
             if isPosDef:
-                upper = mid if mid % 2 == 0 else mid + 1
+                upper = mid
             else:
                 lower = mid
                 self._padding = upper
 
             iteration += 1
 
-        return Lambda
+        if isPosDef:
+            return Lambda
+
+        else:
+
+            print("no smaller padding possible")
+
+            self._padding = initPadding
+            Lambda = self._compute_lambda(cov_ptw_callable)
+
+            return Lambda
 
     def _compute_fft_coefficient(self, cov_ptw_callable):
 
         Lambda = self._compute_lambda(cov_ptw_callable)
 
         if not self._embedding_is_positive_definite(Lambda):
-
             print("initial embedding is not positive definite.")
-
             Lambda = self._determine_valid_lambda(cov_ptw_callable)
 
-            # use bisection to reduce the padding to minimal amount
             if self._performAutotune:
                 Lambda = self._determine_minimal_padding(cov_ptw_callable)
 
         print(f"Padding used: {self._padding}")
 
-        return np.sqrt(Lambda)
+        return np.sqrt(np.real(Lambda))
 
     def generate_realisation(self):
 
         nExt = self._coeff.shape[0]
-        NExt = nExt**2
+        NExt = nExt ** 2
 
-        xi = standard_normal((nExt, nExt)) \
-            + 1.j * standard_normal((nExt, nExt))
+        xi = standard_normal((nExt, nExt)) + 1.j * standard_normal((nExt, nExt))
         V = self._coeff * xi
 
         z = fft2(V) / np.sqrt(NExt)
-        z = z.ravel()
 
-        x = np.real(z)
-        y = np.imag(z)
-
-        # truncate back to domain size
-        x = x[:2 * (self._nGrid + self._padding) * self._nGrid]
-        x = np.reshape(x, (self._nGrid + self._padding, 2 * self._nGrid))
-        x = x[:self._nGrid, ::2]
-
-        y = y[:2 * (self._nGrid + self._padding) * self._nGrid]
-        y = np.reshape(y, (self._nGrid + self._padding, 2 * self._nGrid))
-        y = y[:self._nGrid, ::2]
+        x = np.real(z)[:self._nGrid, :self._nGrid]
+        y = np.imag(z)[:self._nGrid, :self._nGrid]
 
         return x, y
+
 
 
 class ApproximateCirculantEmbedding2DEngine(CirculantEmbedding2DEngine):

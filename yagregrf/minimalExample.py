@@ -2,18 +2,28 @@ import matplotlib.pyplot as plt
 
 from numpy import linspace
 
-from sampling.randomField import RandomField
-from sampling.dnaFourier import DNAFourierEngine1d, DNAFourierEngine2d
-from sampling.spde import SPDEEngine2d
-from sampling.dnaSPDE import DNASPDEEngine2d
-from utility.covariances import matern_fourier_ptw
+from sampling.dnaFourier import DNAFourierEngine1D, DNAFourierEngine2D
+from sampling.spde import SPDEEngine2D
+from sampling.dnaSPDE import DNASPDEEngine2D
+from sampling.circulantEmbedding import CirculantEmbedding2DEngine, ApproximateCirculantEmbedding2DEngine
+from utility.covariances import matern_ptw, matern_fourier_ptw
 
-corrLength = 0.1
+corrLength = 0.2
 smoothness = 1
+var = 1.
 
-nGrid = [1000, 150]
+nGrid = [100, 75]
 
-nSamp = [int(1e3), int(5e1)]
+nSamp = [int(1e2), int(5e0)]
+
+
+engines2D = {
+     "dna_fourier": DNAFourierEngine2D,
+     "dna_spde": DNASPDEEngine2D,
+     "spde": SPDEEngine2D,
+     "ce": CirculantEmbedding2DEngine,
+     "aCE": ApproximateCirculantEmbedding2DEngine
+}
 
 
 dimIdx = 0
@@ -23,32 +33,22 @@ for DIM in [1, 2]:
     def cov_ftrans_callable(s):
         return matern_fourier_ptw(s, corrLength, smoothness, DIM)
 
+    def cov_callable(x):
+        return matern_ptw(x, corrLength, smoothness)
+
     if (DIM == 1):
-        dnaEngine = DNAFourierEngine1d(cov_ftrans_callable, nGrid[dimIdx])
-    elif (DIM == 2):
-        dnaEngine = DNAFourierEngine2d(cov_ftrans_callable, nGrid[dimIdx])
-        spdeEngine = DNASPDEEngine2d(
-            corrLength, smoothness, nGrid[dimIdx], 1.)
-    else:
-        raise NotImplementedError(
-            "Currently only dimensions 1 and 2 are implemented")
+        dimIdx +=1
+        continue
 
-    dnaRF = RandomField(dnaEngine)
+        fig, axes = plt.subplots(2, 2)
+        print("Sampling 1D fields using DNA in Fourier basis")
 
-    if DIM == 2:
-        dnaRF = RandomField(spdeEngine)
-     
-    samples = dnaRF.generate(nSamp[dimIdx])
-
-
-    fig, axes = plt.subplots(2, 2)
-
-    fig.suptitle(f"{nSamp[dimIdx]} realisations of the DNA GRF in {DIM}d")
-
-    if DIM == 1:
+        rf = DNAFourierEngine1D(cov_ftrans_callable, nGrid[dimIdx])
 
         nPlot = 50
         assert nPlot + 3 <= nSamp[dimIdx]
+
+        samples = [rf.generate_realisation() for _ in range(nSamp[dimIdx])]
 
         grid = linspace(0., 1., nGrid[dimIdx], endpoint=True)
 
@@ -59,13 +59,44 @@ for DIM in [1, 2]:
         for i in range(3, 3 + nPlot):
             axes[1, 1].plot(grid, samples[i], alpha=0.5, color='blue')
 
-    else:
-        for i, ax in enumerate(axes.flat):
+        plt.show()
 
-            im = ax.imshow(samples[i], cmap='viridis', interpolation='nearest')
-            ax.axis('off')
-            fig.colorbar(im, ax=ax)
+    if DIM == 2:
 
-    plt.show()
+        for method, engine in engines2D.items():
+
+            print(f"Sampling in 2D using {method}")
+
+            if method == "dna_fourier":
+                rf = engine(cov_ftrans_callable, nGrid[dimIdx])
+            elif method == "dna_spde":
+                rf = engine(var, corrLength, smoothness, nGrid[dimIdx], 1.)
+            elif method == "spde":
+                rf = engine(var, corrLength, smoothness, nGrid[dimIdx], 1.2)
+            elif method == "ce":
+                rf = engine(cov_callable, nGrid[dimIdx])
+            elif method == "aCE":
+                rf = engine(cov_callable, nGrid[dimIdx])
+     
+            realisations = []
+            for n in range(nSamp[dimIdx]):
+
+                if method not in ["ce", "aCE"]:
+                    realisations.append(rf.generate_realisation())
+                else:
+                    realisation, _ = rf.generate_realisation()
+                    realisations.append(realisation)
+
+            fig, axes = plt.subplots(2, 2)
+
+            fig.suptitle(f"{nSamp[dimIdx]} realisations using {method} in {DIM}D")
+
+            for i, ax in enumerate(axes.flat):
+
+                im = ax.imshow(realisations[i], cmap='viridis', interpolation='nearest')
+                ax.axis('off')
+                fig.colorbar(im, ax=ax)
+
+            plt.show()
 
     dimIdx += 1
