@@ -143,12 +143,12 @@ for variable, prefix in variables:
         labelOffset = 0.01
 
     elif variable == "cost":
-        
+
         baseScale = 1.4
         rate = -1.
 
-        x0=0.005
-        y0=0.007
+        x0 = 0.005
+        y0 = 0.007
 
         labelOffset = 0.001
 

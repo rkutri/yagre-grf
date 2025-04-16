@@ -9,7 +9,10 @@ import experiments.scriptUtility as util
 from numpy.linalg import norm
 
 from yagregrf.sampling.dnaFourier import DNAFourierEngine2D
-from yagregrf.sampling.circulantEmbedding import CirculantEmbedding2DEngine, ApproximateCirculantEmbedding2DEngine
+from yagregrf.sampling.circulantEmbedding import (
+    CirculantEmbedding2DEngine,
+    ApproximateCirculantEmbedding2DEngine
+)
 from yagregrf.utility.covariances import (
     cauchy_ptw, cauchy_fourier_ptw,
     gaussian_ptw, gaussian_fourier_ptw,
@@ -46,12 +49,6 @@ models = [
 ]
 
 DIM = 2
-ell1 = 0.05
-ell2 = 0.1
-ell3 = 0.2
-nu1 = 2
-nu2 = 8
-
 nSamp = 100
 nAvg = 100
 
@@ -61,20 +58,42 @@ assert nSamp % 2 == 0
 
 dataBaseDir = 'data'
 
+covParams = {
+    "cauchy": {"ell": 0.1},
+    "gaussian": {"ell": 0.1},
+    "matern_smooth": {"ell": 0.2, "nu": 8.},
+    "matern_nonsmooth": {"ell": 0.05, "nu": 1.},
+    "exponential": {"ell": 0.1}
+}
+
 covFcns = {
-    "cauchy": lambda x: cauchy_ptw(x, ell2),
-    "gaussian": lambda x: gaussian_ptw(x, ell3),
-    "matern_smooth": lambda x: matern_ptw(x, ell3, nu2),
-    "matern_nonsmooth": lambda x: matern_ptw(x, ell2, nu1),
-    "exponential": lambda x: matern_ptw(x, ell2, 0.5)
+    "cauchy": 
+        lambda x: cauchy_ptw(x, covParams["cauchy"]["ell"]),
+    "gaussian":
+        lambda x: gaussian_ptw(x, covParams["gaussian"]["ell"]),
+    "matern_smooth":
+        lambda x: matern_ptw(x, covParams["matern_smooth"]["ell"],
+                                covParams["matern_smooth"]["nu"]),
+    "matern_nonsmooth":
+        lambda x: matern_ptw(x, covParams["matern_nonsmooth"]["ell"],
+                                covParams["matern_nonsmooth"]["nu"]),
+    "exponential":
+        lambda x: matern_ptw(x, covParams["exponential"]["ell"], 0.5)
 }
 
 pwSpecs = {
-    "cauchy": lambda x: cauchy_fourier_ptw(x, ell2, DIM),
-    "gaussian": lambda x: gaussian_fourier_ptw(x, ell3, DIM),
-    "matern_smooth": lambda x: matern_fourier_ptw(x, ell3, nu2, DIM),
-    "matern_nonsmooth": lambda x: matern_fourier_ptw(x, ell2, nu1, DIM),
-    "exponential": lambda x: matern_fourier_ptw(x, ell1, 0.5, DIM)
+    "cauchy":
+        lambda x: cauchy_fourier_ptw(x, covParams["cauchy"]["ell"], DIM),
+    "gaussian":
+        lambda x: gaussian_fourier_ptw(x, covParams["gaussian"]["ell"], DIM),
+    "matern_smooth":
+        lambda x: matern_fourier_ptw(x, covParams["matern_smooth"]["ell"],
+                                        covParams["matern_smooth"]["nu"], DIM),
+    "matern_nonsmooth":
+        lambda x: matern_fourier_ptw(x, covParams["matern_nonsmooth"]["ell"],
+                                        covParams["matern_nonsmooth"]["nu"], DIM),
+    "exponential":
+        lambda x: matern_fourier_ptw(x, covParams["exponential"]["ell"], 0.5, DIM)
 }
 
 
@@ -246,45 +265,8 @@ experimentConfig = [
 
 errorTypes = ["maxError", "froError"]
 
-# FIXME
+# TODO: write the parameters to file
 
-for dataVariable, prefix in experimentConfig:
+# TODO: write data to one file for cost-mw comparison (DNA vs. CE) and one
+#       file for cost-error comparison (DNA vs aCE)
 
-    for error in errorTypes:
-        for modelCov in models:
-
-            ell = ell2  # replace with actual logic if ell varies per model
-            nu = nu1    # replace with actual logic if nu varies per model
-
-            dataString = create_data_string(DIM, 1., ell, nu, nSamp, prefix)
-            paramDir = dataString
-            outDir = os.path.join(dataBaseDir, dataVariable, error, paramDir)
-            os.makedirs(outDir, exist_ok=True)
-
-            filename = os.path.join(outDir, dataString + f"_{filenameID}.csv")
-
-            with open(filename, mode='w', newline='') as file:
-                writer = csv.writer(file)
-
-                if prefix == "cost":
-                    writer.writerow(["mesh_widths"] +
-                                    [1. / n for n in dofPerDim])
-                    writer.writerow(["dna_" + modelCov] +
-                                    costData["dna"][modelCov])
-                    writer.writerow(["ce_" + modelCov] +
-                                    costData["ce"][modelCov])
-
-                if prefix == "err":
-                    costRowTitle = "dna_" + modelCov + "_cost"
-                    errorRowTitle = "dna_" + modelCov + "_" + error
-                    writer.writerow([costRowTitle] + costData["dna"][modelCov])
-                    writer.writerow(
-                        [errorRowTitle] +
-                        errorData[error]["dna"][modelCov])
-
-                    costRowTitle = "aCE_" + modelCov + "_cost"
-                    errorRowTitle = "aCE_" + modelCov + "_" + error
-                    writer.writerow([costRowTitle] + costData["aCE"][modelCov])
-                    writer.writerow(
-                        [errorRowTitle] +
-                        errorData[error]["aCE"][modelCov])
