@@ -171,7 +171,6 @@ for nGrid in dofPerDim:
                     # Half the cost, as we produce two realisations
                     avgCost += 0.5 * (endTime - startTime - avgCost) / (n + 1)
 
-
                 else:
                     rls1, rls2 = ceRF.generate_realisation()
 

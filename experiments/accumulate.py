@@ -9,7 +9,7 @@ DIM = 2
 var = 0.1
 ell = 0.05
 nu = 1.
-nSampBatch = int(5e2)
+nSampBatch = int(5e4)
 
 errorTypes = ["maxError", "froError"]
 

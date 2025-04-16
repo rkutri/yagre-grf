@@ -13,10 +13,11 @@ DIM = 2
 var = 0.1
 ell = 0.05
 nu = 1.
-nSampBatch = int(5e1)
+nSampBatch = int(5e4)
 nBatch = 5
 
-baseDir = 'data'
+# baseDir = 'data'
+baseDir = os.path.join('experiments', 'publicationData')
 fileStr = create_data_string(DIM, var, ell, nu, nSampBatch,
                              "mv_ACCUMULATED") \
     + f"_{nBatch}batches.csv"
@@ -28,11 +29,11 @@ fileName = os.path.join(baseDir, fileStr)
 
 lineWidth = 1.5
 markerSize = 6
-fontSizeLabel = 12
-fontSizeTicks = 10
-tickLabelSize = 8
-fontSizeLegend = 8
-legendMarkerSize = 4
+fontSizeLabel = 10
+fontSizeTicks = 8
+tickLabelSize = 6
+fontSizeLegend = 6
+legendMarkerSize = 6
 
 figWidth = 5.0  # inches
 figHeight = 5.0  # inches
@@ -104,45 +105,10 @@ for i, method in enumerate(methods):
     )
 
 # =============================================================================
-# Draw Rate Indication Triangle
-# =============================================================================
-rate = 0.5
-base = 0.025
-height = rate * base
-xTriangle = [0.05, 0.05 + base]
-yTriangle = [0.02, 0.02 + height]
-
-ax.plot([xTriangle[0], xTriangle[1]], [yTriangle[0],
-                                       yTriangle[0]], color='black', lw=lineWidth)
-ax.plot([xTriangle[1], xTriangle[1]], [yTriangle[0],
-                                       yTriangle[1]], color='black', lw=lineWidth)
-ax.plot([xTriangle[0], xTriangle[1]], [yTriangle[0],
-                                       yTriangle[1]], color='black', lw=lineWidth)
-
-ax.text(
-    xTriangle[0] +
-    0.5 *
-    base,
-    yTriangle[0] -
-    0.006,
-    '1',
-    fontsize=fontSizeTicks,
-    ha='center')
-ax.text(
-    xTriangle[1] +
-    0.003,
-    yTriangle[1] -
-    0.6 *
-    height,
-    '1/2',
-    fontsize=fontSizeTicks,
-    va='center')
-
-# =============================================================================
 # Customize Axes
 # =============================================================================
 ax.set_xlabel('position', fontsize=fontSizeLabel)
-ax.set_ylabel('Error estimate', fontsize=fontSizeLabel)
+ax.set_ylabel('Marginal Variance Estimate', fontsize=fontSizeLabel)
 ax.grid(True, which='both', linestyle='--', linewidth=0.5)
 
 # Set tick label sizes for both major and minor ticks on both axes

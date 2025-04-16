@@ -13,16 +13,18 @@ DIM = 2
 var = 0.1
 ell = 0.05
 nu = 1.0
-nSampBatch = int(5e1)
+nSampBatch = int(5e4)
 nBatch = 5
 
 variables = [("memory", "mem"), ("cost", "cost")]
 
-errorType = "maxError"
+errorTypes = ["maxError", "froError"]
+errorType = errorTypes[1]
 
 for variable, prefix in variables:
 
-    baseDir = 'data'
+    #    baseDir = 'data'
+    baseDir = os.path.join('experiments', 'publicationData')
     fileStr = create_data_string(DIM, var, ell, nu, nSampBatch,
                                  prefix + "_ACCUMULATED") \
         + f"_{nBatch}batches_" + errorType + ".csv"
@@ -34,11 +36,11 @@ for variable, prefix in variables:
 
     lineWidth = 0.8
     markerSize = 6
-    fontSizeLabel = 12
+    fontSizeLabel = 10
     fontSizeTicks = 10
-    tickLabelSize = 8
-    fontSizeLegend = 8
-    legendMarkerSize = 4
+    tickLabelSize = 6
+    fontSizeLegend = 6
+    legendMarkerSize = 6
 
     figWidth = 5.0  # inches
     figHeight = 5.0  # inches
@@ -89,8 +91,9 @@ for variable, prefix in variables:
     # Define Plot Styles
     # =============================================================================
 
-    colors = {'SPDE_nFix': 'tab:blue', 'SPDE_osFix': 'tab:purple',
-              'DNA_fourier': 'tab:green', 'DNA_spde': 'tab:red'}
+    colors = {'SPDE_osFix': 'tab:blue',
+              'DNA_fourier': 'tab:green',
+              'DNA_spde': 'tab:red'}
 
     linestyles = ['-', '--', '-.', ':']
 
@@ -107,7 +110,7 @@ for variable, prefix in variables:
     for i, method in enumerate(methods):
 
         linestyle = linestyles[0]
-        marker = markers[i]
+        marker = markers[0]
         color = colors[method]
 
         ax.errorbar(
@@ -128,46 +131,53 @@ for variable, prefix in variables:
     # =============================================================================
     # Draw Rate Indication Triangle
     # =============================================================================
-    rate = 0.5
-    base = 0.025
-    height = rate * base
-    xTriangle = [0.05, 0.05 + base]
-    yTriangle = [0.02, 0.02 + height]
 
-    ax.plot([xTriangle[0], xTriangle[1]], [yTriangle[0],
-                                           yTriangle[0]], color='black', lw=lineWidth)
-    ax.plot([xTriangle[1], xTriangle[1]], [yTriangle[0],
-                                           yTriangle[1]], color='black', lw=lineWidth)
-    ax.plot([xTriangle[0], xTriangle[1]], [yTriangle[0],
-                                           yTriangle[1]], color='black', lw=lineWidth)
+    if variable == "memory":
 
-    ax.text(
-        xTriangle[0] +
-        0.5 *
-        base,
-        yTriangle[0] -
-        0.006,
-        '1',
-        fontsize=fontSizeTicks,
-        ha='center')
-    ax.text(
-        xTriangle[1] +
-        0.003,
-        yTriangle[1] -
-        0.6 *
-        height,
-        '1/2',
-        fontsize=fontSizeTicks,
-        va='center')
+        baseScale = 1.5
+        rate = -1.
+
+        x0 = 0.03
+        y0 = 0.004
+
+        labelOffset = 0.01
+
+    elif variable == "cost":
+        
+        baseScale = 1.4
+        rate = -1.
+
+        x0=0.005
+        y0=0.007
+
+        labelOffset = 0.001
+
+    else:
+        raise RuntimeError("")
+
+    x1 = x0 * baseScale
+    y1 = y0 * np.power(baseScale, rate)
+
+    ax.plot([x0, x1], [y0, y1], color='black', lw=lineWidth)
+    ax.plot([x0, x1], [y1, y1], color='black', lw=lineWidth)
+    ax.plot([x0, x0], [y0, y1], color='black', lw=lineWidth)
+
+    ax.text(x0 - labelOffset, 1.1 * y1, f"{rate}", color='k',
+            horizontalalignment='center', verticalalignment='bottom', fontsize=0.5 * fontSizeTicks)
 
     # =============================================================================
     # Customize Axes
     # =============================================================================
+
+    ax.set_title(f"d = {DIM}, ell = {ell}, nu = {nu}")
+
+    errorLabel = "maximal error" if errorType == "maxError" else "relative Frobenius error"
+
     ax.set_xlabel(variable, fontsize=fontSizeLabel)
-    ax.set_ylabel('Error estimate', fontsize=fontSizeLabel)
+    ax.set_ylabel(errorLabel, fontsize=fontSizeLabel)
     ax.set_xscale('log')
     ax.set_yscale('log')
-    ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+    ax.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
 
     # Set tick label sizes for both major and minor ticks on both axes
     ax.tick_params(axis='both', which='both', labelsize=tickLabelSize)
