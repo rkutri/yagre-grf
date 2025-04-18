@@ -11,7 +11,7 @@ from experiments.filename import create_data_string
 
 DIM = 2
 var = 0.1
-ell = 0.05
+ell = 0.2
 nu = 1.0
 nSampBatch = int(5e4)
 nBatch = 5
@@ -19,7 +19,7 @@ nBatch = 5
 variables = [("memory", "mem"), ("cost", "cost")]
 
 errorTypes = ["maxError", "froError"]
-errorType = errorTypes[1]
+errorType = errorTypes[0]
 
 for variable, prefix in variables:
 

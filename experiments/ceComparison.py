@@ -2,6 +2,7 @@ import os
 import csv
 import sys
 import time
+import tracemalloc
 
 import numpy as np
 import experiments.scriptUtility as util
@@ -38,19 +39,18 @@ if not (filenameID.isdigit() and len(filenameID) == 2):
 
 print(f"Filename ID set to: '{filenameID}'")
 
-dofPerDim = [16, 32, 64, 128, 256]
+dofPerDim = [16, 32]  # , 64, 128, 256]
 
 models = [
     "cauchy",
     "gaussian",
-    "matern_smooth",
-    "matern_nonsmooth",
+    "matern",
     "exponential"
 ]
 
 DIM = 2
-nSamp = 100
-nAvg = 100
+nSamp = 50
+nAvg = 10
 
 # CE produces two realisations per FFT, so we only need half the sample size
 # in that case
@@ -59,24 +59,24 @@ assert nSamp % 2 == 0
 dataBaseDir = 'data'
 
 covParams = {
-    "cauchy": {"ell": 0.1},
-    "gaussian": {"ell": 0.1},
-    "matern_smooth": {"ell": 0.2, "nu": 8.},
-    "matern_nonsmooth": {"ell": 0.05, "nu": 1.},
+    "cauchy": {"ell": 0.05},
+    "gaussian": {"ell": 0.15},
+    "matern": {"ell": 0.2, "nu": 8.},
+    #    "matern_nonsmooth": {"ell": 0.05, "nu": 1.},
     "exponential": {"ell": 0.1}
 }
 
 covFcns = {
-    "cauchy": 
+    "cauchy":
         lambda x: cauchy_ptw(x, covParams["cauchy"]["ell"]),
     "gaussian":
         lambda x: gaussian_ptw(x, covParams["gaussian"]["ell"]),
-    "matern_smooth":
-        lambda x: matern_ptw(x, covParams["matern_smooth"]["ell"],
-                                covParams["matern_smooth"]["nu"]),
-    "matern_nonsmooth":
-        lambda x: matern_ptw(x, covParams["matern_nonsmooth"]["ell"],
-                                covParams["matern_nonsmooth"]["nu"]),
+    "matern":
+        lambda x: matern_ptw(x, covParams["matern"]["ell"],
+                             covParams["matern"]["nu"]),
+    #    "matern_nonsmooth":
+    #        lambda x: matern_ptw(x, covParams["matern_nonsmooth"]["ell"],
+    #                             covParams["matern_nonsmooth"]["nu"]),
     "exponential":
         lambda x: matern_ptw(x, covParams["exponential"]["ell"], 0.5)
 }
@@ -86,14 +86,15 @@ pwSpecs = {
         lambda x: cauchy_fourier_ptw(x, covParams["cauchy"]["ell"], DIM),
     "gaussian":
         lambda x: gaussian_fourier_ptw(x, covParams["gaussian"]["ell"], DIM),
-    "matern_smooth":
-        lambda x: matern_fourier_ptw(x, covParams["matern_smooth"]["ell"],
-                                        covParams["matern_smooth"]["nu"], DIM),
-    "matern_nonsmooth":
-        lambda x: matern_fourier_ptw(x, covParams["matern_nonsmooth"]["ell"],
-                                        covParams["matern_nonsmooth"]["nu"], DIM),
+    "matern":
+        lambda x: matern_fourier_ptw(x, covParams["matern"]["ell"],
+                                     covParams["matern"]["nu"], DIM),
+    #    "matern_nonsmooth":
+    #         lambda x: matern_fourier_ptw(x, covParams["matern_nonsmooth"]["ell"],
+    # covParams["matern_nonsmooth"]["nu"], DIM),
     "exponential":
-        lambda x: matern_fourier_ptw(x, covParams["exponential"]["ell"], 0.5, DIM)
+        lambda x: matern_fourier_ptw(
+            x, covParams["exponential"]["ell"], 0.5, DIM)
 }
 
 
@@ -113,6 +114,14 @@ costData = {
     "ce": {modelCov: [] for modelCov in models},
     "aCE": {modelCov: [] for modelCov in models}
 }
+
+
+memoryData = {
+    "dna": {modelCov: [] for modelCov in models},
+    "ce": {modelCov: [] for modelCov in models},
+    "aCE": {modelCov: [] for modelCov in models}
+}
+
 
 errorData = {
     "maxError": {
@@ -139,22 +148,41 @@ for nGrid in dofPerDim:
         dnaRF = DNAFourierEngine2D(pwSpecs[modelCov], nGrid)
         dnaCov = CovarianceAccumulator(nGrid)
 
+        avgMem = 0.
         avgCost = 0.
 
         for n in range(nSamp):
+
             print_sampling_progress(n, nSamp)
+
             if n < nAvg:
+
+                tracemalloc.start()
                 startTime = time.perf_counter()
+
                 realisation = dnaRF.generate_realisation()
+
                 endTime = time.perf_counter()
+                _, peak = tracemalloc.get_traced_memory()
+
+                tracemalloc.stop()
+
+                # convert to MB
+                peak /= 1e6
+
+                avgMem += (peak - avgMem) / (n + 1)
                 avgCost += (endTime - startTime - avgCost) / (n + 1)
+
             else:
                 realisation = dnaRF.generate_realisation()
 
             diagSlice = util.extract_diagonal_slice(realisation)
             dnaCov.update(diagSlice)
 
+        print(f"Average peak memory: {avgMem}")
         print(f"Average time per realisation: {avgCost}")
+
+        memoryData["dna"][modelCov].append(avgMem)
         costData["dna"][modelCov].append(avgCost)
 
         print("\n\n- Running vanilla Circulant Embedding")
@@ -168,14 +196,16 @@ for nGrid in dofPerDim:
 
             print(f"Error in CE setup: {e}")
 
+            avgMem = np.inf
             avgCost = np.inf
             embeddingPossible = False
+
+        avgMem = 0.
+        avgCost = 0.
 
         if embeddingPossible:
 
             ceCov = CovarianceAccumulator(nGrid)
-
-            avgCost = 0.
 
             for n in range(nSamp // 2):
 
@@ -183,9 +213,21 @@ for nGrid in dofPerDim:
 
                 if n < nAvg:
 
+                    tracemalloc.start()
                     startTime = time.perf_counter()
+
                     rls1, rls2 = ceRF.generate_realisation()
+
                     endTime = time.perf_counter()
+                    _, peak = tracemalloc.get_traced_memory()
+
+                    # convert to MB
+                    peak /= 1e6
+
+                    tracemalloc.stop()
+
+                    # full memory cost of the algorithm
+                    avgMem += (peak - avgMem) / (n + 1)
 
                     # Half the cost, as we produce two realisations
                     avgCost += 0.5 * (endTime - startTime - avgCost) / (n + 1)
@@ -199,8 +241,10 @@ for nGrid in dofPerDim:
                 diagSlice = util.extract_diagonal_slice(rls2)
                 ceCov.update(diagSlice)
 
-            print(f"Average time per realisation: {avgCost}")
+        print(f"Average peak memory: {avgMem}")
+        print(f"Average time per realisation: {avgCost}")
 
+        memoryData["ce"][modelCov].append(avgMem)
         costData["ce"][modelCov].append(avgCost)
 
         print("\n\n- Running Approximate Circulant Embedding")
@@ -208,6 +252,7 @@ for nGrid in dofPerDim:
         aCERF = ApproximateCirculantEmbedding2DEngine(covFcns[modelCov], nGrid)
         aCECov = CovarianceAccumulator(nGrid)
 
+        avgMem = 0.
         avgCost = 0.
 
         for n in range(nSamp // 2):
@@ -216,11 +261,21 @@ for nGrid in dofPerDim:
 
             if n < nAvg:
 
+                tracemalloc.start()
                 startTime = time.perf_counter()
 
                 rls1, rls2 = aCERF.generate_realisation()
 
                 endTime = time.perf_counter()
+                _, peak = tracemalloc.get_traced_memory()
+
+                tracemalloc.stop()
+
+                # convert to MB
+                peak /= 1e6
+
+                # full memory cost of the algorithm
+                avgMem += (peak - avgMem) / (n + 1)
 
                 # half the cost as we generate two realisations
                 avgCost += 0.5 * (endTime - startTime - avgCost) / (n + 1)
@@ -234,7 +289,10 @@ for nGrid in dofPerDim:
             diagSlice = util.extract_diagonal_slice(rls2)
             aCECov.update(diagSlice)
 
+        print(f"Average peak memory: {avgMem}")
         print(f"Average time per realisation: {avgCost}")
+
+        memoryData["aCE"][modelCov].append(avgMem)
         costData["aCE"][modelCov].append(avgCost)
 
         diagonalGrid = np.sqrt(DIM) * np.linspace(0., 1., nGrid)
@@ -258,15 +316,62 @@ for nGrid in dofPerDim:
         errorData["maxError"]["aCE"][modelCov].append(maxErrorACE)
         errorData["froError"]["aCE"][modelCov].append(froErrorACE)
 
-experimentConfig = [
-    ("cost", "cost"),
-    ("error", "err")
-]
 
 errorTypes = ["maxError", "froError"]
 
-# TODO: write the parameters to file
+subDir = os.path.join(dataBaseDir, "circulantEmbedding")
 
-# TODO: write data to one file for cost-mw comparison (DNA vs. CE) and one
-#       file for cost-error comparison (DNA vs aCE)
+# cost comparison data
+outDir = os.path.join(subDir, "cost")
+os.makedirs(outDir, exist_ok=True)
 
+filename = os.path.join(outDir, "run_" + f"{filenameID}.csv")
+
+with open(filename, mode='w', newline='') as file:
+
+    writer = csv.writer(file)
+
+    writer.writerow(["meshWidths"] + [1. / n for n in dofPerDim])
+
+    for method in ["dna", "ce"]:
+        for modelCov in models:
+            writer.writerow([method + "_" + modelCov] +
+                            costData[method][modelCov])
+
+# error comparison data
+for eType in errorTypes:
+
+    outDir = os.path.join(subDir, "error", eType)
+    os.makedirs(outDir, exist_ok=True)
+
+    filename = os.path.join(outDir, "run_" + f"{filenameID}.csv")
+
+    with open(filename, mode='w', newline='') as file:
+
+        writer = csv.writer(file)
+
+        for method in ["dna", "aCE"]:
+            for modelCov in models:
+
+                methodTitle = method + "_" + modelCov
+                writer.writerow([methodTitle + "_cost"] +
+                                costData[method][modelCov])
+                writer.writerow([methodTitle + "_" + eType] +
+                                errorData[eType][method][modelCov])
+
+# memory comparison data
+outDir = os.path.join(subDir, "memory")
+os.makedirs(outDir, exist_ok=True)
+
+filename = os.path.join(outDir, "run_" + f"{filenameID}.csv")
+
+with open(filename, mode='w', newline='') as file:
+
+    writer = csv.writer(file)
+
+    writer.writerow(["meshWidths"] + [1. / n for n in dofPerDim])
+
+    for method in ["dna", "ce", "aCE"]:
+        for modelCov in models:
+            writer.writerow([method + "_" + modelCov] +
+                            memoryData[method][modelCov])

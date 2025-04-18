@@ -52,7 +52,7 @@ class CirculantEmbedding2DEngine(SamplingEngine):
         NExt = (2 * nExt)**2
         return NExt * ifft2(redCovTilde)
 
-    def _embedding_is_positive_definite(self, freqs, tol=1e-10):
+    def _embedding_is_positive_definite(self, freqs, tol=1e-12):
         d = freqs.ravel()
 
         dReal = np.real(d)

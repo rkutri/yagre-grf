@@ -38,7 +38,7 @@ print(f"Filename ID set to: '{filenameID}'")
 # Parameters
 DIM = 2
 var = 0.1
-ell = 0.2
+ell = 0.05  # TODO: Compare 0.05, 0.15, 0.25
 nu = 1.
 nSamp = int(5e4)
 
@@ -47,7 +47,7 @@ beta = 0.5 * (1. + nu)
 
 dofPerDim = [16, 32, 64, 128, 256]
 
-deltas = np.array([0., 2., 4.]) * ell
+deltas = np.array([0., 2.]) * ell
 # 2 delta in each direction
 oversampling = [1. + 2. * delta for delta in deltas]
 print(f"oversampling deltas for this run: {deltas}")
