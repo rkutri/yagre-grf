@@ -11,7 +11,7 @@ from experiments.filename import create_data_string
 
 DIM = 2
 var = 0.1
-ell = 0.2
+ell = 0.05
 nu = 1.0
 nSampBatch = int(5e4)
 nBatch = 5
@@ -95,7 +95,7 @@ dnaMethods = ["DNA_fourier", "DNA_spde"]
 spdeMethods = [m for m in methods if "SPDE_alpha" in m]
 
 dnaColors = {'DNA_fourier': 'tab:green', 'DNA_spde': 'tab:red'}
-spdeColors = ['tab:orange', 'tab:blue', 'tab:purple']
+spdeColors = ['tab:purple', 'tab:blue', 'tab:orange']
 
 linestyles = ['-', '--', '-.', ':']
 

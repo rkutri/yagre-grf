@@ -42,7 +42,6 @@ print(f"Filename ID set to: '{filenameID}'")
 dofPerDim = [16, 32]  # , 64, 128, 256]
 
 models = [
-    "cauchy",
     "gaussian",
     "matern",
     "exponential"
@@ -59,39 +58,27 @@ assert nSamp % 2 == 0
 dataBaseDir = 'data'
 
 covParams = {
-    "cauchy": {"ell": 0.05},
     "gaussian": {"ell": 0.15},
     "matern": {"ell": 0.2, "nu": 8.},
-    #    "matern_nonsmooth": {"ell": 0.05, "nu": 1.},
     "exponential": {"ell": 0.1}
 }
 
 covFcns = {
-    "cauchy":
-        lambda x: cauchy_ptw(x, covParams["cauchy"]["ell"]),
     "gaussian":
         lambda x: gaussian_ptw(x, covParams["gaussian"]["ell"]),
     "matern":
         lambda x: matern_ptw(x, covParams["matern"]["ell"],
                              covParams["matern"]["nu"]),
-    #    "matern_nonsmooth":
-    #        lambda x: matern_ptw(x, covParams["matern_nonsmooth"]["ell"],
-    #                             covParams["matern_nonsmooth"]["nu"]),
     "exponential":
         lambda x: matern_ptw(x, covParams["exponential"]["ell"], 0.5)
 }
 
 pwSpecs = {
-    "cauchy":
-        lambda x: cauchy_fourier_ptw(x, covParams["cauchy"]["ell"], DIM),
     "gaussian":
         lambda x: gaussian_fourier_ptw(x, covParams["gaussian"]["ell"], DIM),
     "matern":
         lambda x: matern_fourier_ptw(x, covParams["matern"]["ell"],
                                      covParams["matern"]["nu"], DIM),
-    #    "matern_nonsmooth":
-    #         lambda x: matern_fourier_ptw(x, covParams["matern_nonsmooth"]["ell"],
-    # covParams["matern_nonsmooth"]["nu"], DIM),
     "exponential":
         lambda x: matern_fourier_ptw(
             x, covParams["exponential"]["ell"], 0.5, DIM)

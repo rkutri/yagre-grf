@@ -11,9 +11,9 @@ def read_averaged_data(baseDir, nBatch):
 
     averagedData = {}
 
-    for subDir in dataConfig:
+    for q in dataConfig:
 
-        inFilename = f"{subDir}_averaged_{nBatch}batches.csv"
+        inFilename = f"{q}_averaged_{nBatch}batches.csv"
         inFile = os.path.join(baseDir, inFilename)
 
         print(f"Reading {inFile}")
@@ -22,12 +22,14 @@ def read_averaged_data(baseDir, nBatch):
             reader = csv.reader(f)
             rows = list(reader)
 
-        if subDir == "error":
+        if q == "error":
+
             xData = defaultdict(dict)
             yData = defaultdict(dict)
             errorBars = defaultdict(dict)
 
             for row in rows:
+
                 key, *values = row
                 method, modelCov, variable = key.split("_")
                 data = [float(x) for x in values]
@@ -41,7 +43,7 @@ def read_averaged_data(baseDir, nBatch):
                 else:
                     raise RuntimeError(f"Unknown variable: {variable}")
 
-            averagedData[subDir] = {
+            averagedData[q] = {
                 "xData": dict(xData),
                 "yData": dict(yData),
                 "errorBars": dict(errorBars)
@@ -57,7 +59,7 @@ def read_averaged_data(baseDir, nBatch):
                 data = [float(x) for x in values]
                 yData[method][modelCov] = data
 
-            averagedData[subDir] = {
+            averagedData[q] = {
                 "meshWidths": meshWidths,
                 "yData": dict(yData)
             }

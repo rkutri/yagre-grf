@@ -92,4 +92,3 @@ os.makedirs("figures", exist_ok=True)
 output_file = os.path.join("figures", "summary_comparison.pdf")
 plt.savefig(output_file, bbox_inches="tight", format='pdf')
 print(f"Saved plot to {output_file}")
-

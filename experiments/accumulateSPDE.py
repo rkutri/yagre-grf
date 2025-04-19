@@ -7,7 +7,7 @@ from filename import create_data_string
 # Parameters
 DIM = 2
 var = 0.1
-ell = 0.2
+ell = 0.05
 nu = 1.
 nSampBatch = int(5e4)
 
