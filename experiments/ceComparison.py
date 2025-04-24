@@ -39,7 +39,7 @@ if not (filenameID.isdigit() and len(filenameID) == 2):
 
 print(f"Filename ID set to: '{filenameID}'")
 
-dofPerDim = [16, 32]  # , 64, 128, 256]
+dofPerDim = [16, 32, 64, 128, 256, 512]
 
 models = [
     "gaussian",
@@ -48,14 +48,15 @@ models = [
 ]
 
 DIM = 2
-nSamp = 50
-nAvg = 10
+nSamp = int(5e4)
+nAvg = 10000
+
+# dataBaseDir = 'data'
+dataBaseDir = os.path.join("experiments", "publicationData")
 
 # CE produces two realisations per FFT, so we only need half the sample size
 # in that case
 assert nSamp % 2 == 0
-
-dataBaseDir = 'data'
 
 covParams = {
     "gaussian": {"ell": 0.15},
@@ -187,10 +188,10 @@ for nGrid in dofPerDim:
             avgCost = np.inf
             embeddingPossible = False
 
-        avgMem = 0.
-        avgCost = 0.
-
         if embeddingPossible:
+
+            avgMem = 0.
+            avgCost = 0.
 
             ceCov = CovarianceAccumulator(nGrid)
 
@@ -312,7 +313,8 @@ subDir = os.path.join(dataBaseDir, "circulantEmbedding")
 outDir = os.path.join(subDir, "cost")
 os.makedirs(outDir, exist_ok=True)
 
-filename = os.path.join(outDir, "run_" + f"{filenameID}.csv")
+filename = os.path.join(outDir, "run_" +
+                        f"{int(nSamp // 1000)}k_{filenameID}.csv")
 
 with open(filename, mode='w', newline='') as file:
 

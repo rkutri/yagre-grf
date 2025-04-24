@@ -4,10 +4,10 @@ import numpy as np
 from glob import glob
 from filename import create_data_string
 
-nSampBatch = int(5e1)
+nSampBatch = int(5e4)
 errorType = "maxError"
 
-baseDir = os.path.join('data', 'circulantEmbedding')
+baseDir = os.path.join('experiments', 'publicationData', 'circulantEmbedding')
 dataConfig = ["memory", "cost", "error"]
 
 for subDir in dataConfig:

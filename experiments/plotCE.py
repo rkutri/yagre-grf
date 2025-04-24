@@ -3,25 +3,20 @@ import numpy as np
 import os
 from experiments.readCEData import read_averaged_data
 
-methods = ["dna", "ce", "aCE"]
-modelCovs = ["cauchy", "gaussian", "matern", "exponential"]
+methods = ["dna", "aCE", "ce"]
 
 colors = {
-    "dna": "tab:blue",
-    "ce": "tab:orange",
-    "aCE": "tab:green",
+    "dna": "tab:red",
+    "ce": "tab:blue",
+    "aCE": "tab:green"
 }
+linestyles = ["--", "-", ":", "-."]
 
-linestyles = {
-    "Exp": "-",
-    "Matern": "--"
-}
+fig, axes = plt.subplots(1, 3, figsize=(9.0, 3.0), constrained_layout=True)
 
-fig, axes = plt.subplots(1, 3, figsize=(6.2, 2.3), constrained_layout=True)
-
-baseDir = os.path.join("data", "circulantEmbedding")
+baseDir = os.path.join("experiments", "publicationData", "circulantEmbedding")
 errorType = "maxError"
-nBatch = 2
+nBatch = 5
 
 averagedData = read_averaged_data(baseDir, nBatch)
 
@@ -29,13 +24,13 @@ averagedData = read_averaged_data(baseDir, nBatch)
 ax = axes[0]
 meshWidths = averagedData["cost"]["meshWidths"]
 
-for method in averagedData["cost"]["yData"]:
-    for modelCov in averagedData["cost"]["yData"][method]:
+for i, method in enumerate(averagedData["cost"]["yData"]):
+    for j, modelCov in enumerate(averagedData["cost"]["yData"][method]):
         cost = averagedData["cost"]["yData"][method][modelCov]
         ax.plot(meshWidths, cost,
-                label=f"{method}, {modelCov}",
-                color=colors.get(method, "black"),
-                linestyle=linestyles.get(modelCov, "-"))
+                label=f"{method} - {modelCov}",
+                color=colors[method],
+                linestyle=linestyles[j])
 
 ax.set_xlabel("Mesh width")
 ax.set_ylabel("Cost [s]")
@@ -49,13 +44,13 @@ ax.legend(frameon=False, fontsize=7)
 ax = axes[1]
 meshWidths = averagedData["memory"]["meshWidths"]
 
-for method in averagedData["memory"]["yData"]:
-    for modelCov in averagedData["memory"]["yData"][method]:
+for i, method in enumerate(averagedData["memory"]["yData"]):
+    for j, modelCov in enumerate(averagedData["memory"]["yData"][method]):
         memory = averagedData["memory"]["yData"][method][modelCov]
         ax.plot(meshWidths, memory,
-                label=f"{method}, {modelCov}",
-                color=colors.get(method, "black"),
-                linestyle=linestyles.get(modelCov, "-"))
+                label=f"{method} - {modelCov}",
+                color=colors[method],
+                linestyle=linestyles[j])
 
 ax.set_xlabel("Mesh width")
 ax.set_ylabel("Memory [MB]")
@@ -68,14 +63,15 @@ ax.legend(frameon=False, fontsize=7)
 # === 3. Error vs Cost (dna + aCE only) ===
 ax = axes[2]
 
-for method in ["dna", "aCE"]:
-    for modelCov in averagedData["error"]["yData"][method]:
+for i, method in enumerate(averagedData["error"]["yData"]):
+    for j, modelCov in enumerate(averagedData["error"]["yData"][method]):
+
         cost = averagedData["error"]["xData"][method][modelCov]
         error = averagedData["error"]["yData"][method][modelCov]
         ax.plot(cost, error,
-                label=f"{method}, {modelCov}",
+                label=f"{method} -  {modelCov}",
                 color=colors[method],
-                linestyle=linestyles.get(modelCov, "-"))
+                linestyle=linestyles[j])
 
 ax.set_xlabel("Cost [s]")
 ax.set_ylabel("Max error")
