@@ -12,7 +12,7 @@ from collections import OrderedDict
 
 DIM = 2
 var = 0.1
-ell = 0.25
+ell_values = [0.05, 0.15, 0.25]  # List of different ell values
 nu = 1.0
 nSampBatch = int(5e4)
 nBatch = 5
@@ -24,263 +24,267 @@ errorType = errorTypes[0]
 
 legendLabels = [
         r'DNA - Fourier',
-        r'DNA - Finite Element',
+        r'DNA - Lagrange',
         r'SPDE - vanilla',
         r'SPDE - heuristic'
     ]
 
-yLabel = r'est. of maximal error'
+yLabel = r'Monte-Carlo estimate of maximal covariance error'
 xLabels = {
         "oversampling": r'mesh width h',
         "memory": r'peak memory (MB)',
         "cost": r'runtime (s)'
     }
 
-# Create figure with 3 subplots
-fig, axs = plt.subplots(1, 3, figsize=(9, 2.6))
+# Create figure with 3x3 grid of subplots (3 rows, 3 columns)
+fig, axs = plt.subplots(len(ell_values), 3, figsize=(9, 7))
 
-for i, (variable, prefix) in enumerate(variables):
+for i, ell in enumerate(ell_values):
 
-    print(f"generating plot for {variable}")
+    for j, (variable, prefix) in enumerate(variables):
 
-    #    baseDir = 'data'
-    baseDir = os.path.join('experiments', 'publicationData')
-    fileStr = create_data_string(DIM, var, ell, nu, nSampBatch,
-                                 prefix + "_ACCUMULATED") \
-        + f"_{nBatch}batches_" + errorType + ".csv"
-    fileName = os.path.join(baseDir, fileStr)
+        print(f"generating plot for {variable}, ell={ell}")
 
-    # =============================================================================
-    # Plot Appearance Settings (variables)
-    # =============================================================================
+        #    baseDir = 'data'
+        baseDir = os.path.join('experiments', 'publicationData')
+        fileStr = create_data_string(DIM, var, ell, nu, nSampBatch,
+                                     prefix + "_ACCUMULATED") \
+            + f"_{nBatch}batches_" + errorType + ".csv"
+        fileName = os.path.join(baseDir, fileStr)
 
-    lineWidth = 1.2
-    markerSize = 6
-    fontSizeLabel = 10
-    fontSizeTicks = 10
-    tickLabelSize = 6
-    fontSizeLegend = 8
-    legendMarkerSize = 4
-    lineAlpha = 0.9
+        # =============================================================================
+        # Plot Appearance Settings (variables)
+        # =============================================================================
 
-    # =============================================================================
-    # Read Data from CSV
-    # =============================================================================
+        lineWidth = 1.2
+        markerSize = 6
+        fontSizeXLabel = 12
+        fontSizeYLabel = 14
+        fontSizeTicks = 10
+        tickLabelSize = 6
+        fontSizeLegend = 11
+        legendMarkerSize = 6
+        lineAlpha = 0.9
 
-    meshWidths = []
-    methods = []
-    variables = {}
-    errors = {}
-    errorBars = {}
+        # =============================================================================
+        # Read Data from CSV
+        # =============================================================================
 
-    with open(fileName, mode='r') as file:
+        meshWidths = []
+        methods = []
+        xData = {}
+        errors = {}
+        errorBars = {}
 
-        reader = csv.reader(file)
-        rows = list(reader)
+        with open(fileName, mode='r') as file:
 
-        for ii, row in enumerate(rows):
+            reader = csv.reader(file)
+            rows = list(reader)
 
-            if variable == "oversampling":
-
-                isErrorBar = False
-
-                if ii == 0:
-                    meshWidths = [float(x) for x in row[1:]]
-
-                label = row[0]
-
-                if label.count('_') > 1:
-                    isErrorBar = True
-                    method = label.rsplit('_', 1)[0]
-
-                else:
-                    isErrorBar = False
-                    method = label
-
-            else:
-
-                label = row[0].rsplit('_', 1)
-
-                method = label[0]
-                variableName = label[1]
-
-                isErrorBar = (variableName == "bars")
-
-            print(f"\nreading data for {method}")
-
-            if method not in methods:
-                methods.append(method)
-
-            if isErrorBar:
-                if method not in errorBars:
-                    errorBars[method] = [float(x) for x in row[1:]]
-            else:
+            for ii, row in enumerate(rows):
 
                 if variable == "oversampling":
-                    if method not in errors:
-                        errors[method] = [float(x) for x in row[1:]]
-                else:
-                    if variableName == errorType:
-                        if method not in errors:
-                            errors[method] = [float(x) for x in row[1:]]
 
-                    elif variableName == variable:
-                        if method not in variables:
-                            variables[method] = [float(x) for x in row[1:]]
+                    isErrorBar = False
+
+                    if ii == 0:
+                        meshWidths = [float(x) for x in row[1:]]
+
+                    label = row[0]
+
+                    if label.count('_') > 1:
+                        isErrorBar = True
+                        method = label.rsplit('_', 1)[0]
 
                     else:
-                        raise RuntimeError(
-                            f"unknown variable name: {variableName}")
+                        isErrorBar = False
+                        method = label
 
-    # =============================================================================
-    # Define Plot Styles
-    # =============================================================================
+                else:
 
-    colors = {
-        'SPDE': ['tab:purple', 'tab:blue', 'tab:orange'],
-        'DNA_fourier': 'tab:green',
-        'DNA_spde': 'tab:red'
-    }
+                    label = row[0].rsplit('_', 1)
 
-    linestyles = ['-', '--', '-.', ':']
+                    method = label[0]
+                    variableName = label[1]
 
-    markers = ['o', 's', 'D', '^', 'p']
+                    isErrorBar = (variableName == "bars")
 
-    # =============================================================================
-    # Plot Data
-    # =============================================================================
+                print(f"\nreading data for {method}")
 
-    ax = axs[i]  # Select subplot axis
+                if method not in methods:
+                    methods.append(method)
 
-    # Plot SPDE methods
-    for iii, method in enumerate(methods):
+                if isErrorBar:
+                    if method not in errorBars:
+                        errorBars[method] = [float(x) for x in row[1:]]
+                else:
 
-        if method == "meshWidths":
-            continue
+                    if variable == "oversampling":
+                        if method not in errors:
+                            errors[method] = [float(x) for x in row[1:]]
+                    else:
+                        if variableName == errorType:
+                            if method not in errors:
+                                errors[method] = [float(x) for x in row[1:]]
 
-        linestyle = linestyles[0]
-        marker = markers[iii]
+                        elif variableName == variable:
+                            if method not in xData:
+                                xData[method] = [float(x) for x in row[1:]]
 
-        if method == "SPDE_alpha100":
-            color = colors['SPDE'][0]
+                        else:
+                            raise RuntimeError(
+                                f"unknown variable name: {variableName}")
 
-        elif "SPDE" in method:
-            color = colors['SPDE'][1]
+        # =============================================================================
+        # Define Plot Styles
+        # =============================================================================
+
+        colors = {
+            'SPDE': ['tab:purple', 'tab:blue', 'tab:orange'],
+            'DNA_fourier': 'tab:green',
+            'DNA_spde': 'tab:red'
+        }
+
+        linestyles = ['-', '--', '-.', ':']
+
+        markers = ['o', 's', 'D', '^', 'p']
+
+        # =============================================================================
+        # Plot Data
+        # =============================================================================
+
+        ax = axs[i, j]  # Select subplot axis
+
+        # Plot SPDE methods
+        for iii, method in enumerate(methods):
+
+            if method == "meshWidths":
+                continue
+
+            linestyle = linestyles[0]
+            marker = markers[iii-1] if variable == "oversampling" else markers[iii] 
+
+            if method == "SPDE_alpha100":
+                color = colors['SPDE'][0]
+
+            elif "SPDE" in method:
+                color = colors['SPDE'][1]
+            else:
+                color = colors[method]
+
+            if variable == "oversampling":
+                xArray = meshWidths
+            else:
+                xArray = xData[method]
+
+            yArray = errors[method]
+
+            ax.errorbar(
+                xArray,
+                yArray,
+                yerr=errorBars[method],
+                fmt=marker,
+                linestyle=linestyle,
+                label=method.replace("_", " "),
+                markersize=markerSize,
+                markeredgewidth=1.5,
+                elinewidth=lineWidth,
+                capsize=5,
+                color=color,
+                alpha=lineAlpha
+            )
+
+        # =============================================================================
+        # Draw Rate Indication Triangle
+        # =============================================================================
+
+        if variable == "memory":
+
+            baseScale = 1.5
+            rate = -1.
+
+            x0 = 0.03
+            y0 = 0.004
+
+            labelOffset = 0.01
+
+        elif variable == "cost":
+
+            baseScale = 1.4
+            rate = -1.
+
+            x0 = 0.005
+            y0 = 0.007
+
+            labelOffset = 0.001
+
+        elif variable == "oversampling":
+
+            baseScale = 2.0
+            rate = -2.
+
+            x0 = 0.02
+            y0 = 0.01
+
+            labelOffset = 0.02
+
         else:
-            color = colors[method]
+            raise RuntimeError("")
 
-        if variable == "oversampling":
-            xData = meshWidths
-        else:
-            xData = variables[method]
+        x1 = x0 * baseScale
+        y1 = y0 * np.power(baseScale, rate)
 
-        yData = errors[method]
+        ax.plot([x0, x1], [y0, y1], color='black', lw=lineWidth)
+        ax.plot([x0, x1], [y1, y1], color='black', lw=lineWidth)
+        ax.plot([x0, x0], [y0, y1], color='black', lw=lineWidth)
 
-        ax.errorbar(
-            xData,
-            yData,
-            yerr=errorBars[method],
-            fmt=marker,
-            linestyle=linestyle,
-            label=method.replace("_", " "),
-            markersize=markerSize,
-            markeredgewidth=1.5,
-            elinewidth=lineWidth,
-            capsize=5,
-            color=color,
-            alpha=lineAlpha
-        )
+        ax.text(x0 - labelOffset, 1.1 * y1, f"{rate}", color='k',
+                horizontalalignment='center', verticalalignment='bottom', fontsize=0.5 * fontSizeTicks)
 
-    # =============================================================================
-    # Draw Rate Indication Triangle
-    # =============================================================================
+        # =============================================================================
+        # Customize Axes
+        # =============================================================================
 
-    if variable == "memory":
+        errorLabel = "maximal error" if errorType == "maxError" else "relative Frobenius error"
 
-        baseScale = 1.5
-        rate = -1.
+        if i == 1 and j == 0:
+            ax.set_ylabel(yLabel, fontsize=fontSizeYLabel)
 
-        x0 = 0.03
-        y0 = 0.004
+        if i == 2:
+            ax.set_xlabel(xLabels[variable], fontsize=fontSizeXLabel)
 
-        labelOffset = 0.01
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.6)
 
-    elif variable == "cost":
+        # Set tick label sizes for both major and minor ticks on both axes
+        ax.tick_params(axis='both', which='both', labelsize=tickLabelSize)
 
-        baseScale = 1.4
-        rate = -1.
+# =============================================================================
+# Legend Setup
+# =============================================================================
 
-        x0 = 0.005
-        y0 = 0.007
-
-        labelOffset = 0.001
-
-    elif variable == "oversampling":
-
-        baseScale = 2.0
-        rate = -2.
-
-        x0 = 0.02
-        y0 = 0.01
-
-        labelOffset = 0.02
-
-    else:
-        raise RuntimeError("")
-
-    x1 = x0 * baseScale
-    y1 = y0 * np.power(baseScale, rate)
-
-    ax.plot([x0, x1], [y0, y1], color='black', lw=lineWidth)
-    ax.plot([x0, x1], [y1, y1], color='black', lw=lineWidth)
-    ax.plot([x0, x0], [y0, y1], color='black', lw=lineWidth)
-
-    ax.text(x0 - labelOffset, 1.1 * y1, f"{rate}", color='k',
-            horizontalalignment='center', verticalalignment='bottom', fontsize=0.5 * fontSizeTicks)
-
-    # =============================================================================
-    # Customize Axes
-    # =============================================================================
-
-    errorLabel = "maximal error" if errorType == "maxError" else "relative Frobenius error"
-
-    if i == 0:
-        ax.set_ylabel(yLabel, fontsize=fontSizeLabel)
-
-    ax.set_xlabel(xLabels[variable], fontsize=fontSizeLabel)
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.6)
-
-    # Set tick label sizes for both major and minor ticks on both axes
-    ax.tick_params(axis='both', which='both', labelsize=tickLabelSize)
-
-    # =============================================================================
-    # Legend Setup
-    # =============================================================================
-
-handles, _ = axs[0].get_legend_handles_labels() 
-
+handles, _ = axs[0, 0].get_legend_handles_labels()
 
 fig.legend(
     handles,
     legendLabels,
     fontsize=fontSizeLegend,
     loc='center right',
-    bbox_to_anchor=(0.99, 0.8),
+    bbox_to_anchor=(1.0, 0.5),
     frameon=True,
     framealpha=0.9,
     markerscale=legendMarkerSize / markerSize
 )
 
-
 # =============================================================================
 # Final Layout Adjustments and Save Figure
 # =============================================================================
 
-fig.subplots_adjust(left=0.08, right=0.8, top=0.95, bottom=0.18, wspace=0.24)
+fig.subplots_adjust(left=0.09, right=0.77, top=0.97, bottom=0.1, wspace=0.2, hspace=0.18)
 fig.savefig(
     './spde_comparison.pdf',
     format='pdf',
     dpi=300)
 # plt.show()
+
