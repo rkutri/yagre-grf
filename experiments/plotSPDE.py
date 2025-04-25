@@ -12,7 +12,7 @@ from collections import OrderedDict
 
 DIM = 2
 var = 0.1
-ell_values = [0.05, 0.15, 0.25]  # List of different ell values
+ellData = [0.05, 0.1, 0.2]
 nu = 1.0
 nSampBatch = int(5e4)
 nBatch = 5
@@ -23,23 +23,23 @@ errorTypes = ["maxError", "froError"]
 errorType = errorTypes[0]
 
 legendLabels = [
-        r'DNA - Fourier',
-        r'DNA - Lagrange',
-        r'SPDE - vanilla',
-        r'SPDE - heuristic'
-    ]
+    r'DNA - Fourier',
+    r'DNA - Lagrange',
+    r'SPDE - vanilla',
+    r'SPDE - heuristic'
+]
 
 yLabel = r'Monte-Carlo estimate of maximal covariance error'
 xLabels = {
-        "oversampling": r'mesh width h',
-        "memory": r'peak memory (MB)',
-        "cost": r'runtime (s)'
-    }
+    "oversampling": r'mesh width h',
+    "memory": r'peak memory (MB)',
+    "cost": r'runtime (s)'
+}
 
 # Create figure with 3x3 grid of subplots (3 rows, 3 columns)
-fig, axs = plt.subplots(len(ell_values), 3, figsize=(9, 7))
+fig, axs = plt.subplots(len(ellData), 3, figsize=(9, 7))
 
-for i, ell in enumerate(ell_values):
+for i, ell in enumerate(ellData):
 
     for j, (variable, prefix) in enumerate(variables):
 
@@ -56,10 +56,10 @@ for i, ell in enumerate(ell_values):
         # Plot Appearance Settings (variables)
         # =============================================================================
 
-        lineWidth = 1.2
-        markerSize = 6
-        fontSizeXLabel = 12
-        fontSizeYLabel = 14
+        lineWidth = 1.4
+        markerSize = 4
+        fontSizeXLabel = 10
+        fontSizeYLabel = 12
         fontSizeTicks = 10
         tickLabelSize = 6
         fontSizeLegend = 11
@@ -162,7 +162,8 @@ for i, ell in enumerate(ell_values):
                 continue
 
             linestyle = linestyles[0]
-            marker = markers[iii-1] if variable == "oversampling" else markers[iii] 
+            marker = markers[iii -
+                             1] if variable == "oversampling" else markers[iii]
 
             if method == "SPDE_alpha100":
                 color = colors['SPDE'][0]
@@ -281,10 +282,15 @@ fig.legend(
 # Final Layout Adjustments and Save Figure
 # =============================================================================
 
-fig.subplots_adjust(left=0.09, right=0.77, top=0.97, bottom=0.1, wspace=0.2, hspace=0.18)
+fig.subplots_adjust(
+    left=0.07,
+    right=0.77,
+    top=0.97,
+    bottom=0.1,
+    wspace=0.2,
+    hspace=0.18)
 fig.savefig(
     './spde_comparison.pdf',
     format='pdf',
     dpi=300)
 # plt.show()
-

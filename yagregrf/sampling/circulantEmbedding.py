@@ -9,15 +9,16 @@ from yagregrf.utility.evaluation import norm
 class CirculantEmbedding2DEngine(SamplingEngine):
 
     def __init__(self, cov_ptw_callable, vertPerDim,
-                 domExt=1., autotunePadding=True):
+                 domExt=1., autotunePadding=True, maxPadding=512, tol=1e-12):
 
         self._nGrid = vertPerDim  # matches n1 = n2
         self._n = vertPerDim + 1
         self._h = domExt / vertPerDim
         self._padding = 0
+        self._tol = tol
 
         self._performAutotune = autotunePadding
-        self._maxPadding = 512
+        self._maxPadding = maxPadding
 
         if self._padding > self._maxPadding:
             raise RuntimeError(
@@ -52,15 +53,14 @@ class CirculantEmbedding2DEngine(SamplingEngine):
         NExt = (2 * nExt)**2
         return NExt * ifft2(redCovTilde)
 
-    def _embedding_is_positive_definite(self, freqs, tol=1e-10):
+    def _embedding_is_positive_definite(self, freqs):
+
         d = freqs.ravel()
 
         dReal = np.real(d)
         dImag = np.imag(d)
 
-        dNeg = np.maximum(-dReal, 0.)
-
-        return np.max(dNeg) < tol and np.all(dImag < tol)
+        return np.all(dReal >= 0.) and np.all(np.abs(dImag) < self._tol)
 
     def _determine_valid_lambda(self, cov_ptw_callable):
 
@@ -128,7 +128,9 @@ class CirculantEmbedding2DEngine(SamplingEngine):
         Lambda = self._compute_lambda(cov_ptw_callable)
 
         if not self._embedding_is_positive_definite(Lambda):
+
             print("initial embedding is not positive definite.")
+
             Lambda = self._determine_valid_lambda(cov_ptw_callable)
 
             if self._performAutotune:
@@ -157,9 +159,8 @@ class CirculantEmbedding2DEngine(SamplingEngine):
 
 class ApproximateCirculantEmbedding2DEngine(CirculantEmbedding2DEngine):
 
-    def __init__(self, cov_ptw_callable, vertPerDim, domExt=1., tol=1e-12):
+    def __init__(self, cov_ptw_callable, vertPerDim, domExt=1.):
 
-        self._tol = tol
         super().__init__(cov_ptw_callable, vertPerDim, domExt, autotunePadding=False)
 
     def _determine_valid_lambda(self, cov_ptw_callable):
@@ -167,8 +168,6 @@ class ApproximateCirculantEmbedding2DEngine(CirculantEmbedding2DEngine):
         Lambda = self._compute_lambda(cov_ptw_callable)
 
         LambdaReal = np.real(Lambda)
-        LambdaImag = np.imag(Lambda)
-
         LambdaReal[LambdaReal < self._tol] = 0.
 
-        return LambdaReal + 1.j * LambdaImag
+        return LambdaReal

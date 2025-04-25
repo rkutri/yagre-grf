@@ -24,7 +24,12 @@ from yagregrf.utility.evaluation import evaluate_isotropic_covariance_1d
 from filename import create_data_string
 
 
-def max_error(matdiff): return np.max(np.abs(matdiff))
+def max_error(matdiff):
+
+    if np.any(np.isnan(matdiff)):
+        raise RuntimeError("NaN in Matrix difference")
+
+    return np.max(np.abs(matdiff))
 
 
 if len(sys.argv) < 2:
@@ -39,7 +44,7 @@ if not (filenameID.isdigit() and len(filenameID) == 2):
 
 print(f"Filename ID set to: '{filenameID}'")
 
-dofPerDim = [16, 32, 64, 128, 256, 512]
+dofPerDim = [8, 16, 32, 64, 128, 256, 512]
 
 models = [
     "gaussian",
@@ -48,7 +53,7 @@ models = [
 ]
 
 DIM = 2
-nSamp = int(5e4)
+nSamp = int(1e1)
 nAvg = 10000
 
 # dataBaseDir = 'data'
@@ -59,8 +64,8 @@ dataBaseDir = os.path.join("experiments", "publicationData")
 assert nSamp % 2 == 0
 
 covParams = {
-    "gaussian": {"ell": 0.15},
-    "matern": {"ell": 0.2, "nu": 8.},
+    "gaussian": {"ell": 0.1},
+    "matern": {"ell": 0.1, "nu": 6.},
     "exponential": {"ell": 0.1}
 }
 
@@ -114,10 +119,12 @@ memoryData = {
 errorData = {
     "maxError": {
         "dna": {modelCov: [] for modelCov in models},
+        "ce": {modelCov: [] for modelCov in models},
         "aCE": {modelCov: [] for modelCov in models}
     },
     "froError": {
         "dna": {modelCov: [] for modelCov in models},
+        "ce": {modelCov: [] for modelCov in models},
         "aCE": {modelCov: [] for modelCov in models}
     }
 }
@@ -177,8 +184,12 @@ for nGrid in dofPerDim:
 
         embeddingPossible = True
 
+        ceCov = CovarianceAccumulator(nGrid)
+
         try:
-            ceRF = CirculantEmbedding2DEngine(covFcns[modelCov], nGrid)
+            maxPadding = 1024
+            ceRF = CirculantEmbedding2DEngine(
+                covFcns[modelCov], nGrid, maxPadding=1024)
 
         except RuntimeError as e:
 
@@ -192,8 +203,6 @@ for nGrid in dofPerDim:
 
             avgMem = 0.
             avgCost = 0.
-
-            ceCov = CovarianceAccumulator(nGrid)
 
             for n in range(nSamp // 2):
 
@@ -290,16 +299,23 @@ for nGrid in dofPerDim:
         trueCovFrob = norm(trueCov, ord='fro')
 
         dnaError = trueCov - dnaCov.covariance
+        ceError = trueCov - ceCov.covariance
         aCEError = trueCov - aCECov.covariance
 
         maxErrorDNA = max_error(dnaError)
         froErrorDNA = norm(dnaError, ord='fro') / trueCovFrob
+
+        maxErrorCE = max_error(ceError)
+        froErrorCE = norm(ceError, ord='fro') / trueCovFrob
 
         maxErrorACE = max_error(aCEError)
         froErrorACE = norm(aCEError, ord='fro') / trueCovFrob
 
         errorData["maxError"]["dna"][modelCov].append(maxErrorDNA)
         errorData["froError"]["dna"][modelCov].append(froErrorDNA)
+
+        errorData["maxError"]["ce"][modelCov].append(maxErrorCE)
+        errorData["froError"]["ce"][modelCov].append(froErrorCE)
 
         errorData["maxError"]["aCE"][modelCov].append(maxErrorACE)
         errorData["froError"]["aCE"][modelCov].append(froErrorACE)
@@ -322,7 +338,7 @@ with open(filename, mode='w', newline='') as file:
 
     writer.writerow(["meshWidths"] + [1. / n for n in dofPerDim])
 
-    for method in ["dna", "ce"]:
+    for method in ["dna", "ce", "aCE"]:
         for modelCov in models:
             writer.writerow([method + "_" + modelCov] +
                             costData[method][modelCov])

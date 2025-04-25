@@ -11,6 +11,10 @@ class MarginalVarianceAccumulator:
         self._dim = dim
 
     @property
+    def size(self):
+        return self._n
+
+    @property
     def marginalVariance(self):
 
         if self._n == 0:
@@ -38,6 +42,10 @@ class CovarianceAccumulator:
         self._cov = np.zeros((dim, dim))
 
         self._dim = dim
+
+    @property
+    def size(self):
+        return self._n
 
     @property
     def covariance(self):
