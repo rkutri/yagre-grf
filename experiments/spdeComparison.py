@@ -38,7 +38,7 @@ print(f"Filename ID set to: '{filenameID}'")
 # Parameters
 DIM = 2
 var = 0.1
-ell = 0.25
+ell = 0.2
 nu = 1.
 nSamp = int(5e4)
 

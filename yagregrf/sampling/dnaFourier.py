@@ -1,9 +1,12 @@
-from numpy import sqrt, zeros
+import numpy as np
+import yagregrf.utility.series as srs
+
+from enum import Enum
+from scipy.fft import dct, dst
 from numpy.random import standard_normal
 
 from yagregrf.sampling.randomField import RandomField
 from yagregrf.sampling.interface import SamplingEngine
-from yagregrf.utility.series import sin_series, cos_series
 from yagregrf.utility.evaluation import norm
 
 
@@ -19,70 +22,80 @@ class DNAFourierEngine1D(SamplingEngine):
         self._detCoeff = self.compute_coefficient(cov_fourier_callable)
 
     def compute_coefficient(self, ftrans_fcn):
-        return sqrt([ftrans_fcn([m / (2. * self._alpha)])
-                     for m in range(self._nGrid - 1)])
+        return np.sqrt([ftrans_fcn([m / (2. * self._alpha)])
+                        for m in range(self._nGrid - 1)])
 
     def generate_realisation(self):
 
         # inner degrees of freedom (two boundary vertices)
         nDofInner = self._nGrid - 2
 
-        dirEval = sin_series(standard_normal(nDofInner + 1) * self._detCoeff)
-        neuEval = cos_series(standard_normal(nDofInner + 1) * self._detCoeff)
+        dirEval = srs.sin_series(
+            standard_normal(
+                nDofInner +
+                1) *
+            self._detCoeff)
+        neuEval = srs.cos_series(
+            standard_normal(
+                nDofInner +
+                1) *
+            self._detCoeff)
 
-        return (dirEval + neuEval) / sqrt(2. * self._alpha)
+        return (dirEval + neuEval) / np.sqrt(2. * self._alpha)
+
+
+class BC(Enum):
+
+    NONE = -1
+    SINE = 0
+    COSINE = 1
 
 
 class DNAFourierEngine2D(SamplingEngine):
 
     def __init__(self, cov_fourier_callable, vertPerDim, scaling=1.0):
-
         if vertPerDim < 3:
             raise ValueError(
                 "Grid must contain at least 3 points in each direction")
 
-        self._nGrid = vertPerDim
         self._alpha = scaling
-
+        self._nGrid = int(np.ceil(scaling * vertPerDim))
+        self._nCrop = int(self._nGrid / scaling)
         self._detCoeff = self.compute_coefficient(cov_fourier_callable)
-
-        self._bc = [(sin_series, sin_series),
-                    (sin_series, cos_series),
-                    (cos_series, sin_series),
-                    (cos_series, cos_series)]
+        self._bc = [
+            (BC.SINE, BC.SINE),
+            (BC.SINE, BC.COSINE),
+            (BC.COSINE, BC.SINE),
+            (BC.COSINE, BC.COSINE)
+        ]
 
     def compute_coefficient(self, ftrans_fcn):
 
-        # inner degrees of freedom per dimension
         nDofInner = self._nGrid - 2
-
-        fourierEval = zeros((nDofInner + 1, nDofInner + 1))
+        fourierEval = np.zeros((nDofInner + 1, nDofInner + 1))
 
         for i in range(nDofInner + 1):
             for j in range(nDofInner + 1):
                 s = [i / (2. * self._alpha), j / (2. * self._alpha)]
                 fourierEval[i, j] = ftrans_fcn(s)
 
-        return sqrt(fourierEval)
+        return np.sqrt(fourierEval) / self._alpha
 
     def generate_realisation(self):
 
-        # inner degrees of freedom per dimension
-        nDofInner = self._nGrid - 2
+        n = self._nGrid - 2
 
-        realisation = zeros((nDofInner + 2, nDofInner + 2))
+        coeff = standard_normal((n + 1, n + 1)) * self._detCoeff
+        realisation = np.zeros((n + 2, n + 2))
 
-        for row_transform_fcn, col_transform_fcn in self._bc:
+        for rowBC, colBC in self._bc:
 
-            rfEval = zeros((nDofInner + 2, nDofInner + 2))
-            coeff = standard_normal(
-                (nDofInner + 1, nDofInner + 1)) * self._detCoeff
+            row_batch = srs.batch_sin_series_rows if rowBC == BC.SINE else srs.batch_cos_series_rows
+            col_batch = srs.batch_sin_series_cols if colBC == BC.SINE else srs.batch_cos_series_cols
 
-            for row in range(nDofInner + 1):
-                rfEval[row, :] = row_transform_fcn(coeff[row, :])
-            for col in range(nDofInner + 2):
-                rfEval[:, col] = col_transform_fcn(rfEval[:-1, col])
+            R = row_batch(coeff)
+            RC = col_batch(R)
 
-            realisation += rfEval
+            realisation += RC
 
-        return realisation / (2. * self._alpha)
+        return 0.5 * realisation[: self._nCrop, : self._nCrop]

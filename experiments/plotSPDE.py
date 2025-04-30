@@ -56,14 +56,14 @@ for i, ell in enumerate(ellData):
         # Plot Appearance Settings (variables)
         # =============================================================================
 
-        lineWidth = 1.4
-        markerSize = 4
-        fontSizeXLabel = 10
+        lineWidth = 1.5
+        markerSize = 5
+        fontSizeXLabel = 11
         fontSizeYLabel = 12
-        fontSizeTicks = 10
+        fontSizeTicks = 9
         tickLabelSize = 6
-        fontSizeLegend = 11
-        legendMarkerSize = 6
+        fontSizeLegend = 10
+        legendMarkerSize = 5
         lineAlpha = 0.9
 
         # =============================================================================
@@ -190,7 +190,8 @@ for i, ell in enumerate(ellData):
                 markersize=markerSize,
                 markeredgewidth=1.5,
                 elinewidth=lineWidth,
-                capsize=5,
+                capsize=3,
+                capthick=0.5 * lineWidth,
                 color=color,
                 alpha=lineAlpha
             )

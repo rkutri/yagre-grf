@@ -44,7 +44,7 @@ if not (filenameID.isdigit() and len(filenameID) == 2):
 
 print(f"Filename ID set to: '{filenameID}'")
 
-dofPerDim = [8, 16, 32, 64, 128, 256, 512]
+dofPerDim = [8, 16, 32, 64, 128]  # , 256, 512]
 
 models = [
     "gaussian",
@@ -53,8 +53,9 @@ models = [
 ]
 
 DIM = 2
-nSamp = int(1e1)
-nAvg = 10000
+nSamp = int(5e2)
+nAvg = 1000
+maxPadding = 1024
 
 # dataBaseDir = 'data'
 dataBaseDir = os.path.join("experiments", "publicationData")
@@ -65,7 +66,7 @@ assert nSamp % 2 == 0
 
 covParams = {
     "gaussian": {"ell": 0.1},
-    "matern": {"ell": 0.1, "nu": 6.},
+    "matern": {"ell": 0.1, "nu": 5.},
     "exponential": {"ell": 0.1}
 }
 
@@ -134,13 +135,24 @@ for nGrid in dofPerDim:
     print(f"\n\n\nRunning experiments with {nGrid} dofs per dimension")
     print("--------------------------------------------------")
 
+    # heuristic for alpha required for the discretisation error to dominate
+    # the periodisation error
+    dnaAlpha = {
+        "gaussian": 1. + 0.5 * covParams["gaussian"]["ell"] * np.max(1., np.log10(nGrid)),
+        "matern": 1. + covParams["matern"]["ell"] / covParams["matern"]["nu"] * np.max(1., np.log10(nGrid)),
+        "exponential": 1. + 0.1 * covParams["matern"]["ell"] * np.max(1., np.log10(nGrid))
+    }
+
     for modelCov in models:
 
         print(f"\n\n- Benchmarking {modelCov} covariance")
 
         print("\n\n- Running DNA Sampling")
 
-        dnaRF = DNAFourierEngine2D(pwSpecs[modelCov], nGrid)
+        dnaRF = DNAFourierEngine2D(
+            pwSpecs[modelCov],
+            nGrid,
+            scaling=dnaAlpha[modelCov])
         dnaCov = CovarianceAccumulator(nGrid)
 
         avgMem = 0.
@@ -187,9 +199,8 @@ for nGrid in dofPerDim:
         ceCov = CovarianceAccumulator(nGrid)
 
         try:
-            maxPadding = 1024
             ceRF = CirculantEmbedding2DEngine(
-                covFcns[modelCov], nGrid, maxPadding=1024)
+                covFcns[modelCov], nGrid, maxPadding=maxPadding)
 
         except RuntimeError as e:
 

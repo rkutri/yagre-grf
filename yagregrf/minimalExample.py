@@ -68,7 +68,7 @@ for DIM in [1, 2]:
             print(f"Sampling in 2D using {method}")
 
             if method == "dna_fourier":
-                rf = engine(cov_ftrans_callable, nGrid[dimIdx])
+                rf = engine(cov_ftrans_callable, nGrid[dimIdx], scaling=2.)
             elif method == "dna_spde":
                 rf = engine(var, corrLength, smoothness, nGrid[dimIdx], 1.)
             elif method == "spde":

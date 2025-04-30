@@ -21,27 +21,26 @@ colors = {
 }
 linestyles = ["-", "--", ":", "-."]
 markers = {"dna": 'o', "ce": '^', "aCE": 's'}
-zorder = {"dna": 1, "ce": 6, "aCE": 2}
+zorder = {"dna": 7, "ce": 9, "aCE": 8}
 
-markerSize = 4
+markerSize = 5
 markerSizes = {"dna": markerSize, "ce": markerSize - 1, "aCE": markerSize + 1}
 
 
 baseDir = os.path.join("experiments", "publicationData", "circulantEmbedding")
 errorType = "maxError"
-nBatch = 5
+nBatch = 15
 
 averagedData = read_averaged_data(baseDir, nBatch)
-print(averagedData["memory"]["yData"]["ce"]["matern"])
 
 fig, axes = plt.subplots(1, 3, figsize=(9, 2.2))
 
 lineWidth = 1.5
-fontSizeXLabel = 9
-fontSizeYLabel = 9
-fontSizeTicks = 8
+fontSizeXLabel = 11
+fontSizeYLabel = 11
+fontSizeTicks = 9
 tickLabelSize = 6
-fontSizeLegend = 8
+fontSizeLegend = 10
 legendMarkerSize = 4
 lineAlpha = 0.9
 
@@ -69,13 +68,13 @@ for i, method in enumerate(averagedData["cost"]["yData"]):
 
             lastIdx = np.where(np.isfinite(cost))[0][-1]
             ax.scatter([meshWidths[lastIdx]], [cost[lastIdx]], color=colors[method],
-                       s=120, facecolors='none', linewidths=1, alpha=0.8)
+                       s=125, facecolors='none', linewidths=lineWidth, alpha=0.9)
 
 ax.set_xlabel("mesh width h", fontsize=fontSizeXLabel, labelpad=1)
 ax.set_ylabel("runtime (s)", fontsize=fontSizeYLabel, labelpad=1)
 ax.set_xscale("log")
 ax.set_yscale("log")
-ax.grid(True, which="both", ls="--", linewidth=0.5, alpha=0.6)
+ax.grid(True, which="both", ls="--", linewidth=0.5, alpha=0.6, zorder=1)
 ax.tick_params(axis='both', which='both', labelsize=tickLabelSize)
 
 # === 2. Memory vs Mesh Width ===
@@ -102,13 +101,13 @@ for i, method in enumerate(averagedData["memory"]["yData"]):
 
             lastIdx = np.where(np.isfinite(memory))[0][-1]
             ax.scatter(meshWidths[lastIdx], memory[lastIdx], color=colors[method],
-                       s=120, facecolors='none', linewidths=1, alpha=0.8)
+                       s=125, facecolors='none', linewidths=lineWidth, alpha=0.9)
 
 ax.set_xlabel("mesh width h", fontsize=fontSizeXLabel, labelpad=1)
 ax.set_ylabel("peak memory (MB)", fontsize=fontSizeYLabel, labelpad=1)
 ax.set_xscale("log")
 ax.set_yscale("log")
-ax.grid(True, which="both", ls="--", linewidth=0.5, alpha=0.6)
+ax.grid(True, which="both", ls="--", linewidth=0.5, alpha=0.6, zorder=1)
 ax.tick_params(axis='both', which='both', labelsize=tickLabelSize)
 
 # === 3. Error vs Cost (dna + aCE only) ===
@@ -119,27 +118,32 @@ for i, method in enumerate(averagedData["error"]["yData"]):
 
         cost = averagedData["error"]["xData"][method][modelCov]
         error = averagedData["error"]["yData"][method][modelCov]
+        errorBars = averagedData["error"]["errorBars"][method][modelCov]
 
-        ax.plot(cost, error,
-                marker=markers[method],
-                markersize=markerSizes[method],
-                markeredgewidth=1.5,
-                color=colors[method],
-                linestyle=linestyles[j],
-                linewidth=lineWidth,
-                alpha=lineAlpha,
-                zorder=zorder[method])
+        ax.errorbar(cost, error,
+                    yerr=errorBars,
+                    elinewidth=0.75 * lineWidth,
+                    capsize=3,
+                    capthick=0.5 * lineWidth,
+                    marker=markers[method],
+                    markersize=markerSizes[method],
+                    markeredgewidth=1.5,
+                    color=colors[method],
+                    linestyle=linestyles[j],
+                    linewidth=lineWidth,
+                    alpha=lineAlpha,
+                    zorder=zorder[method])
 
 ax.set_xlabel("runtime (s)", fontsize=fontSizeXLabel, labelpad=1)
 ax.set_ylabel("est. covariance error", fontsize=fontSizeYLabel, labelpad=1)
 ax.set_xscale("log")
 ax.set_yscale("log")
 
-ax.grid(True, which="both", ls="--", linewidth=0.5, alpha=0.6)
+ax.grid(True, which="both", ls="--", linewidth=0.5, alpha=0.6, zorder=1)
 ax.tick_params(axis='both', which='both', labelsize=tickLabelSize)
 ax.tick_params(axis='both', which='minor', labelsize=tickLabelSize // 2)
 
-fig.subplots_adjust(left=0.06, right=0.8, top=0.97, bottom=0.16, wspace=0.3)
+fig.subplots_adjust(left=0.055, right=0.765, top=0.97, bottom=0.16, wspace=0.3)
 
 # LEGEND
 methodLabels = {
@@ -169,7 +173,7 @@ methodLegend = plt.legend(
     title=r'Method',
     title_fontproperties=FontProperties(weight='bold'),
     fontsize=fontSizeLegend,
-    bbox_to_anchor=(1.03, 1.0),
+    bbox_to_anchor=(1.03, 1.04),
     frameon=True,
     framealpha=0.9,
     markerscale=legendMarkerSize / markerSize
@@ -182,12 +186,13 @@ plt.legend(
     title=r'Covariance',
     title_fontproperties=FontProperties(weight='bold'),
     fontsize=fontSizeLegend,
-    bbox_to_anchor=(1.03, 0.55),
+    bbox_to_anchor=(1.03, 0.52),
     frameon=True,
     framealpha=0.9,
     markerscale=legendMarkerSize / markerSize
 )
 
-
 # Save to PDF
 plt.savefig('./ce_comparison.pdf', dpi=300, format='pdf')
+
+plt.show()

@@ -145,7 +145,8 @@ class CirculantEmbedding2DEngine(SamplingEngine):
         nExt = self._coeff.shape[0]
         NExt = nExt ** 2
 
-        xi = standard_normal((nExt, nExt)) + 1.j * standard_normal((nExt, nExt))
+        xi = standard_normal((nExt, nExt)) + 1.j * \
+            standard_normal((nExt, nExt))
         V = self._coeff * xi
 
         z = fft2(V) / np.sqrt(NExt)
@@ -154,7 +155,6 @@ class CirculantEmbedding2DEngine(SamplingEngine):
         y = np.imag(z)[:self._nGrid, :self._nGrid]
 
         return x, y
-
 
 
 class ApproximateCirculantEmbedding2DEngine(CirculantEmbedding2DEngine):
