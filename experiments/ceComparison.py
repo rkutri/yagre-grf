@@ -44,7 +44,10 @@ if not (filenameID.isdigit() and len(filenameID) == 2):
 
 print(f"Filename ID set to: '{filenameID}'")
 
-dofPerDim = [8, 16, 32, 64, 128]  # , 256, 512]
+# dataBaseDir = 'data'
+dataBaseDir = os.path.join("experiments", "publicationData")
+
+dofPerDim = [8, 16, 32, 64, 128, 256, 512]
 
 models = [
     "gaussian",
@@ -53,12 +56,10 @@ models = [
 ]
 
 DIM = 2
-nSamp = int(5e2)
+nSamp = int(5e4)
 nAvg = 1000
 maxPadding = 1024
 
-# dataBaseDir = 'data'
-dataBaseDir = os.path.join("experiments", "publicationData")
 
 # CE produces two realisations per FFT, so we only need half the sample size
 # in that case
@@ -70,25 +71,29 @@ covParams = {
     "exponential": {"ell": 0.1}
 }
 
+variance = 0.1
+
 covFcns = {
     "gaussian":
-        lambda x: gaussian_ptw(x, covParams["gaussian"]["ell"]),
+        lambda x: gaussian_ptw(x, covParams["gaussian"]["ell"], margVar=variance),
     "matern":
         lambda x: matern_ptw(x, covParams["matern"]["ell"],
-                             covParams["matern"]["nu"]),
+                                covParams["matern"]["nu"],
+                                margVar=variance),
     "exponential":
-        lambda x: matern_ptw(x, covParams["exponential"]["ell"], 0.5)
+        lambda x: matern_ptw(x, covParams["exponential"]["ell"], nu=0.5, margVar=variance)
 }
 
 pwSpecs = {
     "gaussian":
-        lambda x: gaussian_fourier_ptw(x, covParams["gaussian"]["ell"], DIM),
+        lambda x: gaussian_fourier_ptw(x, covParams["gaussian"]["ell"], dim=DIM, margVar=variance),
     "matern":
         lambda x: matern_fourier_ptw(x, covParams["matern"]["ell"],
-                                     covParams["matern"]["nu"], DIM),
+                                     covParams["matern"]["nu"],
+                                     dim=DIM, margVar=variance),
     "exponential":
         lambda x: matern_fourier_ptw(
-            x, covParams["exponential"]["ell"], 0.5, DIM)
+            x, covParams["exponential"]["ell"], 0.5, dim=DIM, margVar=variance)
 }
 
 
@@ -138,9 +143,9 @@ for nGrid in dofPerDim:
     # heuristic for alpha required for the discretisation error to dominate
     # the periodisation error
     dnaAlpha = {
-        "gaussian": 1. + 0.5 * covParams["gaussian"]["ell"] * np.max(1., np.log10(nGrid)),
-        "matern": 1. + covParams["matern"]["ell"] / covParams["matern"]["nu"] * np.max(1., np.log10(nGrid)),
-        "exponential": 1. + 0.1 * covParams["matern"]["ell"] * np.max(1., np.log10(nGrid))
+        "gaussian": 1. + 3.5 * covParams["gaussian"]["ell"] * np.log10(nGrid),
+        "matern": 1. + 3. * covParams["matern"]["ell"] * np.log10(nGrid),
+        "exponential": 1. + 1.5 * covParams["matern"]["ell"] * np.log10(nGrid)
     }
 
     for modelCov in models:
@@ -360,7 +365,8 @@ for eType in errorTypes:
     outDir = os.path.join(subDir, "error", eType)
     os.makedirs(outDir, exist_ok=True)
 
-    filename = os.path.join(outDir, "run_" + f"{filenameID}.csv")
+    filename = os.path.join(outDir, "run_" +
+                        f"{int(nSamp // 1000)}k_{filenameID}.csv")
 
     with open(filename, mode='w', newline='') as file:
 
@@ -379,7 +385,8 @@ for eType in errorTypes:
 outDir = os.path.join(subDir, "memory")
 os.makedirs(outDir, exist_ok=True)
 
-filename = os.path.join(outDir, "run_" + f"{filenameID}.csv")
+filename = os.path.join(outDir, "run_" +
+                        f"{int(nSamp // 1000)}k_{filenameID}.csv")
 
 with open(filename, mode='w', newline='') as file:
 

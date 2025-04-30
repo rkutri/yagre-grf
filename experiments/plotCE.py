@@ -27,9 +27,9 @@ markerSize = 5
 markerSizes = {"dna": markerSize, "ce": markerSize - 1, "aCE": markerSize + 1}
 
 
-baseDir = os.path.join("experiments", "publicationData", "circulantEmbedding")
+baseDir = os.path.join("experiments", "testData", "circulantEmbedding")
 errorType = "maxError"
-nBatch = 15
+nBatch = 3
 
 averagedData = read_averaged_data(baseDir, nBatch)
 

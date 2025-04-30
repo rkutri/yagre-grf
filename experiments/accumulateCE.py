@@ -4,10 +4,10 @@ import numpy as np
 from glob import glob
 from filename import create_data_string
 
-nSampBatch = int(5e4)
+nSampBatch = int(5e3)
 errorType = "maxError"
 
-baseDir = os.path.join('experiments', 'publicationData', 'circulantEmbedding')
+baseDir = os.path.join('experiments', 'testData', 'circulantEmbedding')
 dataConfig = ["memory", "cost", "error"]
 
 for subDir in dataConfig:
@@ -17,7 +17,7 @@ for subDir in dataConfig:
     else:
         inDir = os.path.join(baseDir, subDir)
 
-    filePattern = os.path.join(inDir, "run_*.csv")
+    filePattern = os.path.join(inDir, f"run_{int(nSampBatch // 1000)}k_*.csv")
     csvFiles = glob(filePattern)
     nBatch = len(csvFiles)
 
@@ -80,6 +80,7 @@ for subDir in dataConfig:
 
     # Averaging
     if subDir == "error":
+
         xAveraged = {
             method: {
                 modelCov: np.mean(xData[method][modelCov], axis=0).tolist()
