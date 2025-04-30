@@ -27,7 +27,7 @@ markerSize = 5
 markerSizes = {"dna": markerSize, "ce": markerSize - 1, "aCE": markerSize + 1}
 
 
-baseDir = os.path.join("experiments", "testData", "circulantEmbedding")
+baseDir = os.path.join("experiments", "publicationData", "circulantEmbedding")
 errorType = "maxError"
 nBatch = 3
 

@@ -44,7 +44,6 @@ if not (filenameID.isdigit() and len(filenameID) == 2):
 
 print(f"Filename ID set to: '{filenameID}'")
 
-# dataBaseDir = 'data'
 dataBaseDir = os.path.join("experiments", "publicationData")
 
 dofPerDim = [8, 16, 32, 64, 128, 256, 512]
@@ -56,8 +55,8 @@ models = [
 ]
 
 DIM = 2
-nSamp = int(5e4)
-nAvg = 1000
+nSamp = int(1e4)
+nAvg = 5000
 maxPadding = 1024
 
 
@@ -143,9 +142,9 @@ for nGrid in dofPerDim:
     # heuristic for alpha required for the discretisation error to dominate
     # the periodisation error
     dnaAlpha = {
-        "gaussian": 1. + 3.5 * covParams["gaussian"]["ell"] * np.log10(nGrid),
+        "gaussian": 1. + 4. * covParams["gaussian"]["ell"] * np.log10(nGrid),
         "matern": 1. + 3. * covParams["matern"]["ell"] * np.log10(nGrid),
-        "exponential": 1. + 1.5 * covParams["matern"]["ell"] * np.log10(nGrid)
+        "exponential": 1. + 2. * covParams["matern"]["ell"] * np.log10(nGrid)
     }
 
     for modelCov in models:

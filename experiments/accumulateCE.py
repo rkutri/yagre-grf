@@ -7,7 +7,7 @@ from filename import create_data_string
 nSampBatch = int(5e3)
 errorType = "maxError"
 
-baseDir = os.path.join('experiments', 'testData', 'circulantEmbedding')
+baseDir = os.path.join('experiments', 'publicationData', 'circulantEmbedding')
 dataConfig = ["memory", "cost", "error"]
 
 for subDir in dataConfig:
