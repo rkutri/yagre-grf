@@ -24,24 +24,41 @@ def sin_series(a):
 
 
 def batch_sin_series_rows(A):
-    inner = dst(A[:, 1:] / np.sqrt(2), type=1, norm="backward", axis=1)
-    return np.pad(inner, ((0, 0), (1, 1)))
+    """
+    Only gives the correct result if 2d array and first row then column
+    """
+
+    # SHOULD BE CORRECT NOW
+    inner = dst(A[:, 1:] / np.sqrt(2.), norm="backward", type=1, axis=1)
+    return np.pad(inner, pad_width=((0, 0), (1, 1)))
 
 
 def batch_sin_series_cols(A):
-    inner = dst(A[1:, :] / np.sqrt(2), type=1, norm="backward", axis=0)
+    """
+    Only gives the correct result if 2d array and first row then column
+    """
+
+    # SHOULD BE CORRECT NOW
+    inner = dst(A[1:, :] / np.sqrt(2.), norm="backward", type=1, axis=0)
     return np.pad(inner, ((1, 1), (0, 0)))
 
 
 def batch_cos_series_rows(A):
-    B = A / np.sqrt(2)
-    B[:, 0] *= np.sqrt(2)
-    Bp = np.pad(B, ((0, 0), (0, 1)))
-    return dct(Bp, type=1, norm="backward", axis=1)
+    """
+    Only gives the correct result if 2d array and first row then column
+    """
+
+    # SHOULD BE CORRECT NOW
+    B = A / np.sqrt(2.)
+    B[:, 0] *= np.sqrt(2.)
+    return dct(np.pad(B, ((0, 0), (0, 1))), norm="backward", type=1, axis=1)
 
 
 def batch_cos_series_cols(A):
+    """
+    Only gives the correct result if 2d array and first row then column
+    """
+
     B = A / np.sqrt(2)
-    B[0, :] *= np.sqrt(2)
-    Bp = np.pad(B, ((0, 1), (0, 0)))
-    return dct(Bp, type=1, norm="backward", axis=0)
+    B[0, :] *= np.sqrt(2.)
+    return dct(np.pad(B, ((0, 1), (0, 0))), norm="backward", type=1, axis=0)

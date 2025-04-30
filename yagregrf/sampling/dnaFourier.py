@@ -54,24 +54,28 @@ class BC(Enum):
 class DNAFourierEngine2D(SamplingEngine):
 
     def __init__(self, cov_fourier_callable, vertPerDim, scaling=1.0):
+
         if vertPerDim < 3:
             raise ValueError(
                 "Grid must contain at least 3 points in each direction")
 
         self._alpha = scaling
+
         self._nGrid = int(np.ceil(scaling * vertPerDim))
         self._nCrop = int(self._nGrid / scaling)
+
         self._detCoeff = self.compute_coefficient(cov_fourier_callable)
-        self._bc = [
-            (BC.SINE, BC.SINE),
-            (BC.SINE, BC.COSINE),
-            (BC.COSINE, BC.SINE),
-            (BC.COSINE, BC.COSINE)
-        ]
+
+        self._bc = [(BC.SINE, BC.SINE),
+                    (BC.SINE, BC.COSINE),
+                    (BC.COSINE, BC.SINE),
+                    (BC.COSINE, BC.COSINE)]
 
     def compute_coefficient(self, ftrans_fcn):
 
+        # inner degrees of freedom per dimension
         nDofInner = self._nGrid - 2
+
         fourierEval = np.zeros((nDofInner + 1, nDofInner + 1))
 
         for i in range(nDofInner + 1):
@@ -83,19 +87,19 @@ class DNAFourierEngine2D(SamplingEngine):
 
     def generate_realisation(self):
 
+        realisation = np.zeros((self._nGrid, self._nGrid))
+
+        # inner degrees of freedom per dimension
         n = self._nGrid - 2
 
-        coeff = standard_normal((n + 1, n + 1)) * self._detCoeff
-        realisation = np.zeros((n + 2, n + 2))
-
         for rowBC, colBC in self._bc:
+
+            coeff = standard_normal((n + 1, n + 1)) * self._detCoeff
 
             row_batch = srs.batch_sin_series_rows if rowBC == BC.SINE else srs.batch_cos_series_rows
             col_batch = srs.batch_sin_series_cols if colBC == BC.SINE else srs.batch_cos_series_cols
 
             R = row_batch(coeff)
-            RC = col_batch(R)
+            realisation += col_batch(R)
 
-            realisation += RC
-
-        return 0.5 * realisation[: self._nCrop, : self._nCrop]
+        return 0.5 * realisation[:self._nCrop, :self._nCrop]
