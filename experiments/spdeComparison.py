@@ -38,9 +38,9 @@ print(f"Filename ID set to: '{filenameID}'")
 # Parameters
 DIM = 2
 var = 0.1
-ell = 0.2
+ell = 0.05
 nu = 1.
-nSamp = int(5e4)
+nSamp = int(2e4)
 
 kappa = np.sqrt(2. * nu) / ell
 beta = 0.5 * (1. + nu)
@@ -52,15 +52,12 @@ deltas = np.array([0., 2.]) * ell
 oversampling = [1. + 2. * delta for delta in deltas]
 print(f"oversampling deltas for this run: {deltas}")
 
-# used in estimation of average time per sample and avg memory current
-nAvg = 1000
-
-# fixed number of dofs used for marginal variance plot
-nFixedMV = dofPerDim[-1]
+# used in estimation of average time per sample and avg memory
+nAvg = 5000
 
 # fixed oversampling size used when decreasing mesh width. Corresponds
 # to 2 times correlation length heuristic.
-osHeuristic = 1. + 4. * ell  # 2 ell in each direction/dimension
+osHeuristic = 1. + 2. * DIM * ell  # 2 ell in each direction/dimension
 osFixedSPDE = min(oversampling, key=lambda x: abs(x - osHeuristic))
 
 dataBaseDir = os.path.join('experiments', 'publicationData')
@@ -87,38 +84,23 @@ def cov_ftrans_callable(s):
 
 
 osData = {
-    "maxError":
-    {
-        "DNA_fourier": [],
-        "DNA_spde": [],
-        "SPDE": [[] for _ in oversampling]
-    },
-    "froError":
-    {
-        "DNA_fourier": [],
-        "DNA_spde": [],
-        "SPDE": [[] for _ in oversampling]
-    }
-}
-
-memData = {
-    "DNA_fourier": {"memory": [], "maxError": [], "froError": []},
-    "DNA_spde": {"memory": [], "maxError": [], "froError": []},
-    "SPDE_osFix": {"memory": [], "maxError": [], "froError": []}
-}
-
-cData = {
-    "DNA_fourier": {"cost": [], "maxError": [], "froError": []},
-    "DNA_spde": {"cost": [], "maxError": [], "froError": []},
-    "SPDE_osFix": {"cost": [], "maxError": [], "froError": []}
-}
-
-mvData = {
-    "pos": [],
     "DNA_fourier": [],
     "DNA_spde": [],
     "SPDE": [[] for _ in oversampling]
 }
+
+memData = {
+    "DNA_fourier": {"memory": [], "maxError": []},
+    "DNA_spde": {"memory": [], "maxError": []},
+    "SPDE_osFix": {"memory": [], "maxError": []}
+}
+
+cData = {
+    "DNA_fourier": {"cost": [], "maxError": []},
+    "DNA_spde": {"cost": [], "maxError": []},
+    "SPDE_osFix": {"cost": [], "maxError": []}
+}
+
 
 for nDof in dofPerDim:
 
@@ -129,7 +111,6 @@ for nDof in dofPerDim:
 
     dnaFourierRF = DNAFourierEngine2D(cov_ftrans_callable, nDof)
     dnaFourierCov = CovarianceAccumulator(nDof)
-    dnaFourierMV = MarginalVarianceAccumulator(nDof)
 
     avgMem = 0.
     avgCost = 0.
@@ -152,7 +133,9 @@ for nDof in dofPerDim:
             peak /= 1e6
 
             avgMem += (peak - avgMem) / (n + 1)
-            avgCost += (endTime - startTime - avgCost) / (n + 1)
+
+            elapsed = endTime - startTime
+            avgCost += (elapsed - avgCost) / (n + 1)
 
             tracemalloc.stop()
 
@@ -161,7 +144,6 @@ for nDof in dofPerDim:
 
         diagSlice = util.extract_diagonal_slice(realisation)
         dnaFourierCov.update(diagSlice)
-        dnaFourierMV.update(diagSlice)
 
     print(f"\naverage peak memory usage: {avgMem} MB")
     print(f"Average time per realisation: {avgCost}")
@@ -173,7 +155,6 @@ for nDof in dofPerDim:
 
     dnaSPDERF = DNASPDEEngine2D(var, ell, nu, nDof, 1.)
     dnaSPDECov = CovarianceAccumulator(nDof)
-    dnaSPDEMV = MarginalVarianceAccumulator(nDof)
 
     avgMem = 0.
     avgCost = 0.
@@ -196,7 +177,9 @@ for nDof in dofPerDim:
             peak /= 1e6
 
             avgMem += (peak - avgMem) / (n + 1)
-            avgCost += (endTime - startTime - avgCost) / (n + 1)
+
+            elapsed = endTime - startTime
+            avgCost += (elapsed - avgCost) / (n + 1)
 
             tracemalloc.stop()
 
@@ -205,7 +188,6 @@ for nDof in dofPerDim:
 
         diagSlice = util.extract_diagonal_slice(realisation)
         dnaSPDECov.update(diagSlice)
-        dnaSPDEMV.update(diagSlice)
 
     print(f"\naverage peak memory usage: {avgMem} MB")
     print(f"Average time per realisation: {avgCost}")
@@ -216,7 +198,6 @@ for nDof in dofPerDim:
     print(f"\n\n- Sampling using SPDE approach with oversampling")
 
     spdeCovList = [CovarianceAccumulator(nDof) for _ in oversampling]
-    spdeMVList = [MarginalVarianceAccumulator(nDof) for _ in oversampling]
 
     for alphaIdx, alpha in enumerate(oversampling):
 
@@ -233,7 +214,6 @@ for nDof in dofPerDim:
                               useDirBC=[False, False])
 
         spdeCov = spdeCovList[alphaIdx]
-        spdeMV = spdeMVList[alphaIdx]
 
         avgMem = 0.
         avgCost = 0.
@@ -256,7 +236,9 @@ for nDof in dofPerDim:
                 peak /= 1e6
 
                 avgMem += (peak - avgMem) / (n + 1)
-                avgCost += (endTime - startTime - avgCost) / (n + 1)
+
+                elapsed = endTime - startTime
+                avgCost += (elapsed - avgCost) / (n + 1)
 
                 tracemalloc.stop()
 
@@ -270,9 +252,6 @@ for nDof in dofPerDim:
 
             spdeCov.update(diagSlice)
 
-            if nDof == nFixedMV:
-                spdeMV.update(diagSlice)
-
         print(f"\naverage peak memory usage: {avgMem} MB")
         print(f"Average time per realisation: {avgCost}")
 
@@ -284,149 +263,98 @@ for nDof in dofPerDim:
     diagonalGrid = util.extract_diagonal_from_mesh(dnaSPDERF.mesh)
 
     trueCov = evaluate_isotropic_covariance_1d(cov_fcn, diagonalGrid)
-    trueCovFrob = norm(trueCov, ord='fro')
-
-    if nDof == nFixedMV:
-        mvData["pos"] = diagonalGrid
 
     dnaFError = trueCov - dnaFourierCov.covariance
-    dnaSError = trueCov - dnaSPDECov.covariance
-
     maxErrorDNAFourier = max_error(dnaFError)
-    froErrorDNAFourier = norm(dnaFError, ord='fro') / trueCovFrob
 
+    dnaSError = trueCov - dnaSPDECov.covariance
     maxErrorDNASPDE = max_error(dnaSError)
-    froErrorDNASPDE = norm(dnaSError, ord='fro') / trueCovFrob
 
-    osData["maxError"]["DNA_fourier"].append(maxErrorDNAFourier)
-    osData["maxError"]["DNA_spde"].append(maxErrorDNASPDE)
-    osData["froError"]["DNA_fourier"].append(froErrorDNAFourier)
-    osData["froError"]["DNA_spde"].append(froErrorDNASPDE)
+    osData["DNA_fourier"].append(maxErrorDNAFourier)
+    osData["DNA_spde"].append(maxErrorDNASPDE)
 
     memData["DNA_fourier"]["maxError"].append(maxErrorDNAFourier)
-    memData["DNA_fourier"]["froError"].append(froErrorDNAFourier)
     memData["DNA_spde"]["maxError"].append(maxErrorDNASPDE)
-    memData["DNA_spde"]["froError"].append(froErrorDNASPDE)
 
     cData["DNA_fourier"]["maxError"].append(maxErrorDNAFourier)
-    cData["DNA_fourier"]["froError"].append(froErrorDNAFourier)
     cData["DNA_spde"]["maxError"].append(maxErrorDNASPDE)
-    cData["DNA_spde"]["froError"].append(froErrorDNASPDE)
-
-    if nDof == nFixedMV:
-
-        mvData["DNA_fourier"] = dnaFourierMV.marginalVariance
-        mvData["DNA_spde"] = dnaSPDEMV.marginalVariance
 
     for i, spdeCov in enumerate(spdeCovList):
 
         spdeError = trueCov - spdeCov.covariance
 
         maxErrorSPDE = max_error(spdeError)
-        froErrorSPDE = norm(spdeError, ord='fro') / trueCovFrob
 
-        osData["maxError"]["SPDE"][i].append(maxErrorSPDE)
-        osData["froError"]["SPDE"][i].append(froErrorSPDE)
+        osData["SPDE"][i].append(maxErrorSPDE)
 
         if np.abs(osFixedSPDE - oversampling[i]) < 1e-8:
 
             memData["SPDE_osFix"]["maxError"].append(maxErrorSPDE)
-            memData["SPDE_osFix"]["froError"].append(froErrorSPDE)
-
             cData["SPDE_osFix"]["maxError"].append(maxErrorSPDE)
-            cData["SPDE_osFix"]["froError"].append(froErrorSPDE)
-
-        if nDof == nFixedMV:
-            mvData["SPDE"][i] = spdeMVList[i].marginalVariance
 
 experimentConfig = [
     ("oversampling", "os"),
     ("memory", "mem"),
-    ("cost", "cost"),
-    ("marginalVariance", "mv")
+    ("cost", "cost")
 ]
 
-errorTypes = ["maxError", "froError"]
-
+error = "maxError"
 
 for dataVariable, prefix in experimentConfig:
 
-    for i, error in enumerate(errorTypes):
+    dataString = create_data_string(DIM, var, ell, nu, nSamp, prefix)
+    outDir = os.path.join(dataBaseDir, dataVariable, dataString)
 
-        # Skip mv for all but the first error type
-        if prefix == "mv" and i > 0:
-            continue
+    os.makedirs(outDir, exist_ok=True)
 
-        dataString = create_data_string(DIM, var, ell, nu, nSamp, prefix)
+    filename = os.path.join(outDir, dataString + f"_{filenameID}.csv")
 
-        if prefix == "mv":
-            outDir = os.path.join(dataBaseDir, dataVariable, dataString)
-        else:
-            outDir = os.path.join(dataBaseDir, dataVariable, error, dataString)
+    with open(filename, mode='w', newline='') as file:
 
-        os.makedirs(outDir, exist_ok=True)
+        writer = csv.writer(file)
 
-        filename = os.path.join(outDir, dataString + f"_{filenameID}.csv")
+        if prefix == "os":
 
-        with open(filename, mode='w', newline='') as file:
+            writer.writerow(["problemSize"] + [n**DIM for n in dofPerDim])
+            writer.writerow(["DNA_fourier"] + osData["DNA_fourier"])
+            writer.writerow(["DNA_spde"] + osData["DNA_spde"])
 
-            writer = csv.writer(file)
-
-            if prefix == "os":
-
-                writer.writerow(["mesh_widths"] + [1. / n for n in dofPerDim])
-                writer.writerow(["DNA_fourier"] + osData[error]["DNA_fourier"])
-                writer.writerow(["DNA_spde"] + osData[error]["DNA_spde"])
-
-                for i, alpha in enumerate(oversampling):
-                    writer.writerow(
-                        [f"SPDE_alpha{int(100*alpha)}"] +
-                        osData[error]["SPDE"][i]
-                    )
-
-            elif prefix == "mem":
-
+            for i, alpha in enumerate(oversampling):
                 writer.writerow(
-                    ["DNA_fourier_memory"] +
-                    memData["DNA_fourier"]["memory"])
-                writer.writerow(["DNA_fourier_" + error] +
-                                memData["DNA_fourier"][error])
-                writer.writerow(
-                    ["DNA_spde_memory"] +
-                    memData["DNA_spde"]["memory"])
-                writer.writerow(["DNA_spde_" + error] +
-                                memData["DNA_spde"][error])
-                writer.writerow(
-                    ["SPDE_osFix_memory"] +
-                    memData["SPDE_osFix"]["memory"])
-                writer.writerow(["SPDE_osFix_" + error] +
-                                memData["SPDE_osFix"][error])
+                    [f"SPDE_alpha{int(100*alpha)}"] +
+                    osData["SPDE"][i]
+                )
 
-            elif prefix == "cost":
+        elif prefix == "mem":
 
-                writer.writerow(
-                    ["DNA_fourier_cost"] +
-                    cData["DNA_fourier"]["cost"])
-                writer.writerow(["DNA_fourier_" + error] +
-                                cData["DNA_fourier"][error])
-                writer.writerow(["DNA_spde_cost"] + cData["DNA_spde"]["cost"])
-                writer.writerow(["DNA_spde_" + error] +
-                                cData["DNA_spde"][error])
-                writer.writerow(
-                    ["SPDE_osFix_cost"] +
-                    cData["SPDE_osFix"]["cost"])
-                writer.writerow(["SPDE_osFix_" + error] +
-                                cData["SPDE_osFix"][error])
+            writer.writerow(
+                ["DNA_fourier_memory"] +
+                memData["DNA_fourier"]["memory"])
+            writer.writerow(["DNA_fourier_" + error] +
+                            memData["DNA_fourier"][error])
+            writer.writerow(
+                ["DNA_spde_memory"] +
+                memData["DNA_spde"]["memory"])
+            writer.writerow(["DNA_spde_" + error] +
+                            memData["DNA_spde"][error])
+            writer.writerow(
+                ["SPDE_osFix_memory"] +
+                memData["SPDE_osFix"]["memory"])
+            writer.writerow(["SPDE_osFix_" + error] +
+                            memData["SPDE_osFix"][error])
 
-            elif prefix == "mv":
+        elif prefix == "cost":
 
-                writer.writerow(["position"] + mvData["pos"].tolist())
-                writer.writerow(
-                    ["DNA_fourier"] +
-                    mvData["DNA_fourier"].tolist())
-                writer.writerow(["DNA_spde"] + mvData["DNA_spde"].tolist())
-
-                for i, alpha in enumerate(oversampling):
-                    writer.writerow(
-                        [f"SPDE_alpha{int(100*alpha)}"] +
-                        mvData["SPDE"][i].tolist())
+            writer.writerow(
+                ["DNA_fourier_cost"] +
+                cData["DNA_fourier"]["cost"])
+            writer.writerow(["DNA_fourier_" + error] +
+                            cData["DNA_fourier"][error])
+            writer.writerow(["DNA_spde_cost"] + cData["DNA_spde"]["cost"])
+            writer.writerow(["DNA_spde_" + error] +
+                            cData["DNA_spde"][error])
+            writer.writerow(
+                ["SPDE_osFix_cost"] +
+                cData["SPDE_osFix"]["cost"])
+            writer.writerow(["SPDE_osFix_" + error] +
+                            cData["SPDE_osFix"][error])

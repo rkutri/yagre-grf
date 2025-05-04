@@ -3,6 +3,7 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter, LogFormatterMathtext
+from matplotlib.font_manager import FontProperties
 from experiments.filename import create_data_string
 from collections import OrderedDict
 
@@ -14,24 +15,17 @@ DIM = 2
 var = 0.1
 ellData = [0.05, 0.1, 0.2]
 nu = 1.0
-nSampBatch = int(5e4)
-nBatch = 5
+nSampBatch = int(2e4)
+nBatch = 15
 
 variables = [("oversampling", "os"), ("memory", "mem"), ("cost", "cost")]
 
-errorTypes = ["maxError", "froError"]
-errorType = errorTypes[0]
+errorType = "maxError"
 
-legendLabels = [
-    r'DNA - Fourier',
-    r'DNA - Lagrange',
-    r'SPDE - vanilla',
-    r'SPDE - heuristic'
-]
 
 yLabel = r'Monte-Carlo estimate of maximal covariance error'
 xLabels = {
-    "oversampling": r'mesh width h',
+    "oversampling": r'problem size (dofs)',
     "memory": r'peak memory (MB)',
     "cost": r'runtime (s)'
 }
@@ -70,7 +64,7 @@ for i, ell in enumerate(ellData):
         # Read Data from CSV
         # =============================================================================
 
-        meshWidths = []
+        problemSize = []
         methods = []
         xData = {}
         errors = {}
@@ -88,7 +82,7 @@ for i, ell in enumerate(ellData):
                     isErrorBar = False
 
                     if ii == 0:
-                        meshWidths = [float(x) for x in row[1:]]
+                        problemSize = [float(x) for x in row[1:]]
 
                     label = row[0]
 
@@ -107,9 +101,7 @@ for i, ell in enumerate(ellData):
                     method = label[0]
                     variableName = label[1]
 
-                    isErrorBar = (variableName == "bars")
-
-                print(f"\nreading data for {method}")
+                    isErrorBar = (variableName == "bar")
 
                 if method not in methods:
                     methods.append(method)
@@ -158,7 +150,7 @@ for i, ell in enumerate(ellData):
         # Plot SPDE methods
         for iii, method in enumerate(methods):
 
-            if method == "meshWidths":
+            if method == "problemSize":
                 continue
 
             linestyle = linestyles[0]
@@ -174,7 +166,7 @@ for i, ell in enumerate(ellData):
                 color = colors[method]
 
             if variable == "oversampling":
-                xArray = meshWidths
+                xArray = problemSize
             else:
                 xArray = xData[method]
 
@@ -200,48 +192,35 @@ for i, ell in enumerate(ellData):
         # Draw Rate Indication Triangle
         # =============================================================================
 
-        if variable == "memory":
+        if variable == "oversampling":
 
-            baseScale = 1.5
-            rate = -1.
+            if i == 0:
+                x0 = 2000
+                y0 = 0.02
+                labelOffset = 1500
 
-            x0 = 0.03
-            y0 = 0.004
+            elif i == 1:
+                x0 = 1750
+                y0 = 0.01
+                labelOffset = 1250
 
-            labelOffset = 0.01
-
-        elif variable == "cost":
-
-            baseScale = 1.4
-            rate = -1.
-
-            x0 = 0.005
-            y0 = 0.007
-
-            labelOffset = 0.001
-
-        elif variable == "oversampling":
+            elif i == 2:
+                x0 = 1250
+                y0 = 0.005
+                labelOffset = 1000
 
             baseScale = 2.0
-            rate = -2.
+            rate = -0.5
 
-            x0 = 0.02
-            y0 = 0.01
+            x1 = x0 * baseScale
+            y1 = y0 / np.power(baseScale, rate)
 
-            labelOffset = 0.02
+            ax.plot([x0, x1], [y1, y0], color='black', lw=lineWidth)
+            ax.plot([x0, x1], [y1, y1], color='black', lw=lineWidth)
+            ax.plot([x1, x1], [y0, y1], color='black', lw=lineWidth)
 
-        else:
-            raise RuntimeError("")
-
-        x1 = x0 * baseScale
-        y1 = y0 * np.power(baseScale, rate)
-
-        ax.plot([x0, x1], [y0, y1], color='black', lw=lineWidth)
-        ax.plot([x0, x1], [y1, y1], color='black', lw=lineWidth)
-        ax.plot([x0, x0], [y0, y1], color='black', lw=lineWidth)
-
-        ax.text(x0 - labelOffset, 1.1 * y1, f"{rate}", color='k',
-                horizontalalignment='center', verticalalignment='bottom', fontsize=0.5 * fontSizeTicks)
+            ax.text(x1 + labelOffset, 1.05 * y0, f"1/2", color='k',
+                    horizontalalignment='center', verticalalignment='bottom', fontsize=0.5 * fontSizeTicks)
 
         # =============================================================================
         # Customize Axes
@@ -266,19 +245,27 @@ for i, ell in enumerate(ellData):
 # Legend Setup
 # =============================================================================
 
+dnaLabels = [r'DST/DCT', r'Q1 FEM']
+spdeLabels = [r'no oversampling', r'oversampling $2\ell$']
+
 handles, _ = axs[0, 0].get_legend_handles_labels()
 
-fig.legend(
-    handles,
-    legendLabels,
-    fontsize=fontSizeLegend,
-    loc='center right',
-    bbox_to_anchor=(1.0, 0.5),
-    frameon=True,
-    framealpha=0.9,
-    markerscale=legendMarkerSize / markerSize
-)
+dnaHandles = handles[:2]
+spdeHandles = handles[2:]
 
+dnaLegend = plt.legend(
+    handles=dnaHandles, labels=dnaLabels, title=r'DNA',
+    title_fontproperties=FontProperties(weight='bold'),
+    fontsize=fontSizeLegend, bbox_to_anchor=(1.705, 2.15), frameon=True,
+    framealpha=0.9, markerscale=legendMarkerSize / markerSize)
+
+plt.gca().add_artist(dnaLegend)
+
+plt.legend(
+    handles=spdeHandles, labels=spdeLabels, title=r'SPDE',
+    title_fontproperties=FontProperties(weight='bold'),
+    fontsize=fontSizeLegend, bbox_to_anchor=(2.0, 1.75), frameon=True,
+    framealpha=0.9, markerscale=legendMarkerSize / markerSize)
 # =============================================================================
 # Final Layout Adjustments and Save Figure
 # =============================================================================
