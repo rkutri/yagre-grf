@@ -11,8 +11,8 @@ from numpy.linalg import norm
 
 from yagregrf.sampling.dnaFourier import DNAFourierEngine2D
 from yagregrf.sampling.circulantEmbedding import (
-    CirculantEmbedding2DEngine,
-    ApproximateCirculantEmbedding2DEngine
+    CirculantEmbeddingEngine2D,
+    ApproximateCirculantEmbeddingEngine2D
 )
 from yagregrf.utility.covariances import (
     cauchy_ptw, cauchy_fourier_ptw,
@@ -55,8 +55,8 @@ models = [
 ]
 
 DIM = 2
-nSamp = int(1e4)
-nAvg = 5000
+nSamp = int(2e4)
+nAvg = 10000
 maxPadding = 1024
 
 
@@ -74,18 +74,26 @@ variance = 0.1
 
 covFcns = {
     "gaussian":
-        lambda x: gaussian_ptw(x, covParams["gaussian"]["ell"], margVar=variance),
+        lambda x: gaussian_ptw(
+            x,
+            covParams["gaussian"]["ell"],
+            margVar=variance),
     "matern":
         lambda x: matern_ptw(x, covParams["matern"]["ell"],
-                                covParams["matern"]["nu"],
-                                margVar=variance),
+                             covParams["matern"]["nu"],
+                             margVar=variance),
     "exponential":
-        lambda x: matern_ptw(x, covParams["exponential"]["ell"], nu=0.5, margVar=variance)
+        lambda x: matern_ptw(
+            x,
+            covParams["exponential"]["ell"],
+            nu=0.5,
+            margVar=variance)
 }
 
 pwSpecs = {
     "gaussian":
-        lambda x: gaussian_fourier_ptw(x, covParams["gaussian"]["ell"], dim=DIM, margVar=variance),
+        lambda x: gaussian_fourier_ptw(
+            x, covParams["gaussian"]["ell"], dim=DIM, margVar=variance),
     "matern":
         lambda x: matern_fourier_ptw(x, covParams["matern"]["ell"],
                                      covParams["matern"]["nu"],
@@ -139,24 +147,13 @@ for nGrid in dofPerDim:
     print(f"\n\n\nRunning experiments with {nGrid} dofs per dimension")
     print("--------------------------------------------------")
 
-    # heuristic for alpha required for the discretisation error to dominate
-    # the periodisation error
-    dnaAlpha = {
-        "gaussian": 1. + 4. * covParams["gaussian"]["ell"] * np.log10(nGrid),
-        "matern": 1. + 3. * covParams["matern"]["ell"] * np.log10(nGrid),
-        "exponential": 1. + 2. * covParams["matern"]["ell"] * np.log10(nGrid)
-    }
-
     for modelCov in models:
 
         print(f"\n\n- Benchmarking {modelCov} covariance")
 
         print("\n\n- Running DNA Sampling")
 
-        dnaRF = DNAFourierEngine2D(
-            pwSpecs[modelCov],
-            nGrid,
-            scaling=dnaAlpha[modelCov])
+        dnaRF = DNAFourierEngine2D(pwSpecs[modelCov], nGrid)
         dnaCov = CovarianceAccumulator(nGrid)
 
         avgMem = 0.
@@ -203,7 +200,7 @@ for nGrid in dofPerDim:
         ceCov = CovarianceAccumulator(nGrid)
 
         try:
-            ceRF = CirculantEmbedding2DEngine(
+            ceRF = CirculantEmbeddingEngine2D(
                 covFcns[modelCov], nGrid, maxPadding=maxPadding)
 
         except RuntimeError as e:
@@ -261,7 +258,7 @@ for nGrid in dofPerDim:
 
         print("\n\n- Running Approximate Circulant Embedding")
 
-        aCERF = ApproximateCirculantEmbedding2DEngine(covFcns[modelCov], nGrid)
+        aCERF = ApproximateCirculantEmbeddingEngine2D(covFcns[modelCov], nGrid)
         aCECov = CovarianceAccumulator(nGrid)
 
         avgMem = 0.
@@ -365,7 +362,7 @@ for eType in errorTypes:
     os.makedirs(outDir, exist_ok=True)
 
     filename = os.path.join(outDir, "run_" +
-                        f"{int(nSamp // 1000)}k_{filenameID}.csv")
+                            f"{int(nSamp // 1000)}k_{filenameID}.csv")
 
     with open(filename, mode='w', newline='') as file:
 

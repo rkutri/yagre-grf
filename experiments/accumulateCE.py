@@ -4,7 +4,7 @@ import numpy as np
 from glob import glob
 from filename import create_data_string
 
-nSampBatch = int(5e3)
+nSampBatch = int(2e4)
 errorType = "maxError"
 
 baseDir = os.path.join('experiments', 'publicationData', 'circulantEmbedding')

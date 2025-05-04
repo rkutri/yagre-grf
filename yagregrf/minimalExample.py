@@ -5,14 +5,14 @@ from numpy import linspace
 from sampling.dnaFourier import DNAFourierEngine1D, DNAFourierEngine2D
 from sampling.spde import SPDEEngine2D
 from sampling.dnaSPDE import DNASPDEEngine2D
-from sampling.circulantEmbedding import CirculantEmbedding2DEngine, ApproximateCirculantEmbedding2DEngine
+from sampling.circulantEmbedding import CirculantEmbeddingEngine2D, ApproximateCirculantEmbeddingEngine2D
 from utility.covariances import matern_ptw, matern_fourier_ptw
 
 corrLength = 0.2
 smoothness = 1
 var = 1.
 
-nGrid = [100, 75]
+nGrid = [150, 100]
 
 nSamp = [int(1e2), int(5e0)]
 
@@ -21,8 +21,8 @@ engines2D = {
      "dna_fourier": DNAFourierEngine2D,
      "dna_spde": DNASPDEEngine2D,
      "spde": SPDEEngine2D,
-     "ce": CirculantEmbedding2DEngine,
-     "aCE": ApproximateCirculantEmbedding2DEngine
+     "ce": CirculantEmbeddingEngine2D,
+     "aCE": ApproximateCirculantEmbeddingEngine2D
 }
 
 
@@ -89,11 +89,11 @@ for DIM in [1, 2]:
 
             fig, axes = plt.subplots(2, 2)
 
-            fig.suptitle(f"{nSamp[dimIdx]} realisations using {method} in {DIM}D")
+            fig.suptitle(f"{method} in {DIM}D")
 
             for i, ax in enumerate(axes.flat):
 
-                im = ax.imshow(realisations[i], cmap='viridis', interpolation='nearest')
+                im = ax.imshow(realisations[i], cmap='seismic', interpolation='nearest')
                 ax.axis('off')
                 fig.colorbar(im, ax=ax)
 

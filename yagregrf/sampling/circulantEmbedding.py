@@ -6,15 +6,15 @@ from yagregrf.sampling.interface import SamplingEngine
 from yagregrf.utility.evaluation import norm
 
 
-class CirculantEmbedding2DEngine(SamplingEngine):
+class CirculantEmbeddingEngine2D(SamplingEngine):
 
     def __init__(self, cov_ptw_callable, vertPerDim,
-                 domExt=1., autotunePadding=True, maxPadding=512, tol=1e-12):
+                 domExt=1., autotunePadding=True, padding=0, maxPadding=512, tol=1e-12):
 
         self._nGrid = vertPerDim  # matches n1 = n2
         self._n = vertPerDim + 1
         self._h = domExt / vertPerDim
-        self._padding = 0
+        self._padding = padding
         self._tol = tol
 
         self._performAutotune = autotunePadding
@@ -65,7 +65,9 @@ class CirculantEmbedding2DEngine(SamplingEngine):
     def _determine_valid_lambda(self, cov_ptw_callable):
 
         isPosDef = False
-        nextPadding = 2
+
+        # next power of 2 after self._padding
+        nextPadding = 1 << self._padding.bit_length()
 
         while not isPosDef and nextPadding <= self._maxPadding:
             print(f"check definiteness for padding={nextPadding}")
@@ -157,11 +159,12 @@ class CirculantEmbedding2DEngine(SamplingEngine):
         return x, y
 
 
-class ApproximateCirculantEmbedding2DEngine(CirculantEmbedding2DEngine):
+class ApproximateCirculantEmbeddingEngine2D(CirculantEmbeddingEngine2D):
 
-    def __init__(self, cov_ptw_callable, vertPerDim, domExt=1.):
+    def __init__(self, cov_ptw_callable, vertPerDim, domExt=1., padding=0):
 
-        super().__init__(cov_ptw_callable, vertPerDim, domExt, autotunePadding=False)
+        super().__init__(cov_ptw_callable, vertPerDim, domExt,
+                autotunePadding=False, padding=padding)
 
     def _determine_valid_lambda(self, cov_ptw_callable):
 
