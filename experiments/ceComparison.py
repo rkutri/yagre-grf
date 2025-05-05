@@ -55,8 +55,8 @@ models = [
 ]
 
 DIM = 2
-nSamp = int(2e4)
-nAvg = 10000
+nSamp = int(1e4)
+nAvg = 5000
 maxPadding = 1024
 
 
@@ -113,227 +113,191 @@ def print_sampling_progress(n, nSamp, nUpdates=9):
             print(f"{n} iterations done")
 
 
-meshWidths = []
+problemSize = []
+costData = {"dna": [], "aCE": [], "ce": {modelCov: [] for modelCov in models}}
+memoryData = {"dna": [], "aCE": [], "ce": {modelCov: []
+                                           for modelCov in models}}
 
-costData = {
-    "dna": {modelCov: [] for modelCov in models},
-    "ce": {modelCov: [] for modelCov in models},
-    "aCE": {modelCov: [] for modelCov in models}
-}
+# covariance used to benchmark runtime and memory for dna and aCE
+benchmarkCov = "exponential"
 
-
-memoryData = {
-    "dna": {modelCov: [] for modelCov in models},
-    "ce": {modelCov: [] for modelCov in models},
-    "aCE": {modelCov: [] for modelCov in models}
-}
+embeddingPossibleFlag = [True for modelCov in models]
 
 
-errorData = {
-    "maxError": {
-        "dna": {modelCov: [] for modelCov in models},
-        "ce": {modelCov: [] for modelCov in models},
-        "aCE": {modelCov: [] for modelCov in models}
-    },
-    "froError": {
-        "dna": {modelCov: [] for modelCov in models},
-        "ce": {modelCov: [] for modelCov in models},
-        "aCE": {modelCov: [] for modelCov in models}
-    }
-}
+print(f"Benchmarking {benchmarkCov} covariance")
 
 for nGrid in dofPerDim:
 
     print(f"\n\n\nRunning experiments with {nGrid} dofs per dimension")
     print("--------------------------------------------------")
 
-    for modelCov in models:
+    problemSize.append(nGrid**DIM)
 
-        print(f"\n\n- Benchmarking {modelCov} covariance")
+    print("\n\n- Running DNA Sampling")
 
-        print("\n\n- Running DNA Sampling")
+    dnaRF = DNAFourierEngine2D(pwSpecs[benchmarkCov], nGrid)
+    dnaCov = CovarianceAccumulator(nGrid)
 
-        dnaRF = DNAFourierEngine2D(pwSpecs[modelCov], nGrid)
-        dnaCov = CovarianceAccumulator(nGrid)
+    avgMem = 0.
+    avgCost = 0.
 
-        avgMem = 0.
-        avgCost = 0.
+    for n in range(nSamp):
 
-        for n in range(nSamp):
+        print_sampling_progress(n, nSamp)
 
-            print_sampling_progress(n, nSamp)
+        if n < nAvg:
 
-            if n < nAvg:
+            tracemalloc.start()
+            startTime = time.perf_counter()
 
-                tracemalloc.start()
-                startTime = time.perf_counter()
+            realisation = dnaRF.generate_realisation()
 
-                realisation = dnaRF.generate_realisation()
+            endTime = time.perf_counter()
+            _, peak = tracemalloc.get_traced_memory()
 
-                endTime = time.perf_counter()
-                _, peak = tracemalloc.get_traced_memory()
+            tracemalloc.stop()
 
-                tracemalloc.stop()
+            # convert to MB
+            peak /= 1e6
 
-                # convert to MB
-                peak /= 1e6
+            avgMem += (peak - avgMem) / (n + 1)
+            avgCost += (endTime - startTime - avgCost) / (n + 1)
 
-                avgMem += (peak - avgMem) / (n + 1)
-                avgCost += (endTime - startTime - avgCost) / (n + 1)
+        else:
+            realisation = dnaRF.generate_realisation()
 
-            else:
-                realisation = dnaRF.generate_realisation()
+        diagSlice = util.extract_diagonal_slice(realisation)
+        dnaCov.update(diagSlice)
 
-            diagSlice = util.extract_diagonal_slice(realisation)
-            dnaCov.update(diagSlice)
+    print(f"Average peak memory: {avgMem}")
+    print(f"Average time per realisation: {avgCost}")
 
-        print(f"Average peak memory: {avgMem}")
-        print(f"Average time per realisation: {avgCost}")
+    memoryData["dna"].append(avgMem)
+    costData["dna"].append(avgCost)
 
-        memoryData["dna"][modelCov].append(avgMem)
-        costData["dna"][modelCov].append(avgCost)
+    print("\n\n- Running vanilla Circulant Embedding")
 
-        print("\n\n- Running vanilla Circulant Embedding")
+    for i, modelCov in enumerate(models):
 
-        embeddingPossible = True
+        print(f"\n- Benchmarking {modelCov} covariance")
 
-        ceCov = CovarianceAccumulator(nGrid)
+        if embeddingPossibleFlag[i]:
 
-        try:
-            ceRF = CirculantEmbeddingEngine2D(
-                covFcns[modelCov], nGrid, maxPadding=maxPadding)
+            try:
+                ceRF = CirculantEmbeddingEngine2D(
+                    covFcns[modelCov], nGrid, maxPadding=maxPadding)
 
-        except RuntimeError as e:
+            except RuntimeError as e:
 
-            print(f"Error in CE setup: {e}")
+                print(f"Error in CE setup: {e}")
+                embeddingPossibleFlag[i] = False
 
-            avgMem = np.inf
-            avgCost = np.inf
-            embeddingPossible = False
+                costData["ce"][modelCov].append(np.inf)
+                memoryData["ce"][modelCov].append(np.inf)
 
-        if embeddingPossible:
+            if embeddingPossibleFlag[i]:
 
-            avgMem = 0.
-            avgCost = 0.
+                ceCov = CovarianceAccumulator(nGrid)
 
-            for n in range(nSamp // 2):
+                avgMem = 0.
+                avgCost = 0.
 
-                print_sampling_progress(n, nSamp)
+                for n in range(nSamp // 2):
 
-                if n < nAvg:
+                    print_sampling_progress(n, nSamp)
 
-                    tracemalloc.start()
-                    startTime = time.perf_counter()
+                    if n < nAvg:
 
-                    rls1, rls2 = ceRF.generate_realisation()
+                        tracemalloc.start()
+                        startTime = time.perf_counter()
 
-                    endTime = time.perf_counter()
-                    _, peak = tracemalloc.get_traced_memory()
+                        rls1, rls2 = ceRF.generate_realisation()
 
-                    # convert to MB
-                    peak /= 1e6
+                        endTime = time.perf_counter()
+                        _, peak = tracemalloc.get_traced_memory()
 
-                    tracemalloc.stop()
+                        tracemalloc.stop()
 
-                    # full memory cost of the algorithm
-                    avgMem += (peak - avgMem) / (n + 1)
+                        # convert to MB
+                        peak /= 1e6
 
-                    # Half the cost, as we produce two realisations
-                    avgCost += 0.5 * (endTime - startTime - avgCost) / (n + 1)
+                        # full memory cost of the algorithm
+                        avgMem += (peak - avgMem) / (n + 1)
 
-                else:
-                    rls1, rls2 = ceRF.generate_realisation()
+                        # half the cost as we generate two realisations
+                        avgCost += 0.5 * \
+                            (endTime - startTime - avgCost) / (n + 1)
 
-                diagSlice = util.extract_diagonal_slice(rls1)
-                ceCov.update(diagSlice)
+                    else:
+                        rls1, rls2 = aCERF.generate_realisation()
 
-                diagSlice = util.extract_diagonal_slice(rls2)
-                ceCov.update(diagSlice)
+                    diagSlice = util.extract_diagonal_slice(rls1)
+                    ceCov.update(diagSlice)
 
-        print(f"Average peak memory: {avgMem}")
-        print(f"Average time per realisation: {avgCost}")
+                    diagSlice = util.extract_diagonal_slice(rls2)
+                    ceCov.update(diagSlice)
 
-        memoryData["ce"][modelCov].append(avgMem)
-        costData["ce"][modelCov].append(avgCost)
+                print(f"Average peak memory: {avgMem}")
+                print(f"Average time per realisation: {avgCost}")
 
-        print("\n\n- Running Approximate Circulant Embedding")
+                memoryData["ce"][modelCov].append(avgMem)
+                costData["ce"][modelCov].append(avgCost)
 
-        aCERF = ApproximateCirculantEmbeddingEngine2D(covFcns[modelCov], nGrid)
-        aCECov = CovarianceAccumulator(nGrid)
+        else:
 
-        avgMem = 0.
-        avgCost = 0.
+            print(f"Skipping CE for {modelCov} covariance, as previous " +
+                  "embedding was not possible")
 
-        for n in range(nSamp // 2):
+            costData["ce"][modelCov].append(np.inf)
+            memoryData["ce"][modelCov].append(np.inf)
 
-            print_sampling_progress(n, nSamp)
+    print("\n\n- Running Approximate Circulant Embedding")
 
-            if n < nAvg:
+    aCERF = ApproximateCirculantEmbeddingEngine2D(covFcns[benchmarkCov], nGrid)
+    aCECov = CovarianceAccumulator(nGrid)
 
-                tracemalloc.start()
-                startTime = time.perf_counter()
+    avgMem = 0.
+    avgCost = 0.
 
-                rls1, rls2 = aCERF.generate_realisation()
+    for n in range(nSamp // 2):
 
-                endTime = time.perf_counter()
-                _, peak = tracemalloc.get_traced_memory()
+        print_sampling_progress(n, nSamp)
 
-                tracemalloc.stop()
+        if n < nAvg:
 
-                # convert to MB
-                peak /= 1e6
+            tracemalloc.start()
+            startTime = time.perf_counter()
 
-                # full memory cost of the algorithm
-                avgMem += (peak - avgMem) / (n + 1)
+            rls1, rls2 = aCERF.generate_realisation()
 
-                # half the cost as we generate two realisations
-                avgCost += 0.5 * (endTime - startTime - avgCost) / (n + 1)
+            endTime = time.perf_counter()
+            _, peak = tracemalloc.get_traced_memory()
 
-            else:
-                rls1, rls2 = aCERF.generate_realisation()
+            tracemalloc.stop()
 
-            diagSlice = util.extract_diagonal_slice(rls1)
-            aCECov.update(diagSlice)
+            # convert to MB
+            peak /= 1e6
 
-            diagSlice = util.extract_diagonal_slice(rls2)
-            aCECov.update(diagSlice)
+            # full memory cost of the algorithm
+            avgMem += (peak - avgMem) / (n + 1)
 
-        print(f"Average peak memory: {avgMem}")
-        print(f"Average time per realisation: {avgCost}")
+            # half the cost as we generate two realisations
+            avgCost += 0.5 * (endTime - startTime - avgCost) / (n + 1)
 
-        memoryData["aCE"][modelCov].append(avgMem)
-        costData["aCE"][modelCov].append(avgCost)
+        else:
+            rls1, rls2 = ceRF.generate_realisation()
 
-        diagonalGrid = np.sqrt(DIM) * np.linspace(0., 1., nGrid)
+        diagSlice = util.extract_diagonal_slice(rls1)
+        aCECov.update(diagSlice)
 
-        trueCov = evaluate_isotropic_covariance_1d(
-            covFcns[modelCov], diagonalGrid)
-        trueCovFrob = norm(trueCov, ord='fro')
+        diagSlice = util.extract_diagonal_slice(rls2)
+        aCECov.update(diagSlice)
 
-        dnaError = trueCov - dnaCov.covariance
-        ceError = trueCov - ceCov.covariance
-        aCEError = trueCov - aCECov.covariance
+    print(f"Average peak memory: {avgMem}")
+    print(f"Average time per realisation: {avgCost}")
 
-        maxErrorDNA = max_error(dnaError)
-        froErrorDNA = norm(dnaError, ord='fro') / trueCovFrob
-
-        maxErrorCE = max_error(ceError)
-        froErrorCE = norm(ceError, ord='fro') / trueCovFrob
-
-        maxErrorACE = max_error(aCEError)
-        froErrorACE = norm(aCEError, ord='fro') / trueCovFrob
-
-        errorData["maxError"]["dna"][modelCov].append(maxErrorDNA)
-        errorData["froError"]["dna"][modelCov].append(froErrorDNA)
-
-        errorData["maxError"]["ce"][modelCov].append(maxErrorCE)
-        errorData["froError"]["ce"][modelCov].append(froErrorCE)
-
-        errorData["maxError"]["aCE"][modelCov].append(maxErrorACE)
-        errorData["froError"]["aCE"][modelCov].append(froErrorACE)
-
-
-errorTypes = ["maxError", "froError"]
+    memoryData["aCE"].append(avgMem)
+    costData["aCE"].append(avgCost)
 
 subDir = os.path.join(dataBaseDir, "circulantEmbedding")
 
@@ -348,34 +312,14 @@ with open(filename, mode='w', newline='') as file:
 
     writer = csv.writer(file)
 
-    writer.writerow(["meshWidths"] + [1. / n for n in dofPerDim])
+    writer.writerow(["problemSize"] + problemSize)
 
-    for method in ["dna", "ce", "aCE"]:
-        for modelCov in models:
-            writer.writerow([method + "_" + modelCov] +
-                            costData[method][modelCov])
+    for method in ["dna", "aCE"]:
+        writer.writerow([method] + costData[method])
 
-# error comparison data
-for eType in errorTypes:
+    for modelCov in models:
+        writer.writerow(["ce_" + modelCov] + costData["ce"][modelCov])
 
-    outDir = os.path.join(subDir, "error", eType)
-    os.makedirs(outDir, exist_ok=True)
-
-    filename = os.path.join(outDir, "run_" +
-                            f"{int(nSamp // 1000)}k_{filenameID}.csv")
-
-    with open(filename, mode='w', newline='') as file:
-
-        writer = csv.writer(file)
-
-        for method in ["dna", "aCE"]:
-            for modelCov in models:
-
-                methodTitle = method + "_" + modelCov
-                writer.writerow([methodTitle + "_cost"] +
-                                costData[method][modelCov])
-                writer.writerow([methodTitle + "_" + eType] +
-                                errorData[eType][method][modelCov])
 
 # memory comparison data
 outDir = os.path.join(subDir, "memory")
@@ -388,9 +332,10 @@ with open(filename, mode='w', newline='') as file:
 
     writer = csv.writer(file)
 
-    writer.writerow(["meshWidths"] + [1. / n for n in dofPerDim])
+    writer.writerow(["problemSize"] + problemSize)
 
-    for method in ["dna", "ce", "aCE"]:
-        for modelCov in models:
-            writer.writerow([method + "_" + modelCov] +
-                            memoryData[method][modelCov])
+    for method in ["dna", "aCE"]:
+        writer.writerow([method] + memoryData[method])
+
+    for modelCov in models:
+        writer.writerow(["ce_" + modelCov] + memoryData["ce"][modelCov])

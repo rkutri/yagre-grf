@@ -13,10 +13,10 @@ from collections import OrderedDict
 
 DIM = 2
 var = 0.1
-ellData = [0.05, 0.1, 0.2]
+ellData = [0.05, 0.05, 0.05]
 nu = 1.0
 nSampBatch = int(2e4)
-nBatch = 15
+nBatch = 12
 
 variables = [("oversampling", "os"), ("memory", "mem"), ("cost", "cost")]
 

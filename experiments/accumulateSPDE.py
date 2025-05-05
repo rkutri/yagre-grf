@@ -9,7 +9,7 @@ from scipy.stats import t
 # Parameters
 DIM = 2
 var = 0.1
-ell = 0.2
+ell = 0.05
 nu = 1.
 nSampBatch = int(2e4)
 
@@ -91,14 +91,14 @@ for subDir, prefix in dataConfig:
     }
 
     # compute confidence intervals
-    standardErrors = {
-        method: np.std(errorSamples[method], axis=0, ddof=1) / np.sqrt(nBatch)
-        for method in methods
-    }
+    ciFactor = 1.96
     errorBars = {
-        method: np.max(t.interval(0.95, df=nBatch - 1,
-                                  loc=averagedErrors[method],
-                                  scale=standardErrors[method]), axis=0).tolist()
+        method: (
+            ciFactor *
+            np.std(
+                errorSamples[method],
+                axis=0) /
+            np.sqrt(nBatch)).tolist()
         for method in methods
     }
 

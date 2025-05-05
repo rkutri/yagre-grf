@@ -34,7 +34,7 @@ markerSizes = {"dna": markerSize, "ce": markerSize - 1, "aCE": markerSize + 1}
 
 baseDir = os.path.join("experiments", "publicationData", "circulantEmbedding")
 errorType = "maxError"
-nBatch = 5
+nBatch = 2
 
 averagedData = read_averaged_data(baseDir, nBatch)
 
@@ -52,40 +52,39 @@ circleSize = 225
 
 # === 1. Cost vs Mesh Width ===
 ax = axes[0]
-meshWidths = averagedData["cost"]["meshWidths"]
-problemSize = [1. / h**2 for h in meshWidths]
+problemSize = averagedData["cost"]["problemSize"]
 
+ceIdx = 0
 for i, method in enumerate(averagedData["cost"]["yData"]):
-    for j, modelCov in enumerate(averagedData["cost"]["yData"][method]):
 
-        if method == "ce":
+    if "ce" in method:
 
-            cost = averagedData["cost"]["yData"][method][modelCov]
-            costPlt = averagedData["cost"]["yData"]["aCE"][modelCov]
+        cost = averagedData["cost"]["yData"][method]
+        costPlt = averagedData["cost"]["yData"]["aCE"]
 
-            # add circle, if embedding was not possible
-            if np.any(np.isinf(cost)):
+        # add circle, if embedding was not possible
+        if np.any(np.isinf(cost)):
 
-                lastIdx = np.where(np.isfinite(cost))[0][-1]
-                ax.scatter([problemSize[lastIdx]], costPlt[lastIdx], color=colors[method],
-                           s=circleSize, facecolors='none', linewidths=1.5 * lineWidth, alpha=0.9,
-                           linestyle=linestyles[j])
-        else:
-            if j > 0:
-                continue
+            lastIdx = np.where(np.isfinite(cost))[0][-1]
+            ax.scatter([problemSize[lastIdx]], costPlt[lastIdx], color=colors["ce"],
+                       s=circleSize, facecolors='none', linewidths=1.5 * lineWidth, alpha=0.9,
+                       linestyle=linestyles[ceIdx])
 
-            cost = averagedData["cost"]["yData"][method][modelCov]
+        ceIdx += 1
+    else:
 
-            ax.plot(problemSize, cost,
-                    marker=markers[method],
-                    markersize=markerSizes[method],
-                    markeredgewidth=1.5,
-                    color=colors[method],
-                    linestyle=linestyles[j],
-                    linewidth=lineWidth,
-                    alpha=lineAlpha,
-                    zorder=zorder[method],
-                    label=methodLabels[method])
+        cost = averagedData["cost"]["yData"][method]
+
+        ax.plot(problemSize, cost,
+                marker=markers[method],
+                markersize=markerSizes[method],
+                markeredgewidth=1.5,
+                color=colors[method],
+                linestyle=linestyles[0],
+                linewidth=lineWidth,
+                alpha=lineAlpha,
+                zorder=zorder[method],
+                label=methodLabels[method])
 
 ax.set_xlabel("problem size (dofs)", fontsize=fontSizeXLabel, labelpad=1)
 ax.set_ylabel("runtime (s)", fontsize=fontSizeYLabel, labelpad=1)
@@ -96,41 +95,41 @@ ax.tick_params(axis='both', which='both', labelsize=tickLabelSize)
 
 # === 2. Memory vs Mesh Width ===
 ax = axes[1]
-meshWidths = averagedData["memory"]["meshWidths"]
-problemSize = [1. / h**2 for h in meshWidths]
+problemSize = averagedData["memory"]["problemSize"]
+
+ceIdx = 0
 
 for i, method in enumerate(averagedData["memory"]["yData"]):
-    for j, modelCov in enumerate(averagedData["memory"]["yData"][method]):
 
-        if method == "ce":
+    if "ce" in method:
 
-            memory = averagedData["memory"]["yData"][method][modelCov]
-            memPlt = averagedData["memory"]["yData"]["aCE"][modelCov]
+        memory = averagedData["memory"]["yData"][method]
+        memPlt = averagedData["memory"]["yData"]["aCE"]
 
-            # add circle, if embedding was not possible
-            if np.any(np.isinf(memory)):
+        # add circle, if embedding was not possible
+        if np.any(np.isinf(memory)):
 
-                lastIdx = np.where(np.isfinite(memory))[0][-1]
-                ax.scatter(problemSize[lastIdx], memPlt[lastIdx], color=colors[method],
-                           s=circleSize, facecolors='none', linewidths=1.5 * lineWidth, alpha=0.9,
-                           linestyle=linestyles[j])
+            lastIdx = np.where(np.isfinite(memory))[0][-1]
+            ax.scatter(problemSize[lastIdx], memPlt[lastIdx], color=colors["ce"],
+                       s=circleSize, facecolors='none', linewidths=1.5 * lineWidth, alpha=0.9,
+                       linestyle=linestyles[ceIdx])
 
-        else:
-            if j > 0:
-                continue
+        ceIdx += 1
 
-            memory = averagedData["memory"]["yData"][method][modelCov]
+    else:
 
-            ax.plot(problemSize, memory,
-                    marker=markers[method],
-                    markersize=markerSizes[method],
-                    markeredgewidth=1.5,
-                    color=colors[method],
-                    linestyle=linestyles[j],
-                    linewidth=lineWidth,
-                    alpha=lineAlpha,
-                    zorder=zorder[method],
-                    label=methodLabels[method])
+        memory = averagedData["memory"]["yData"][method]
+
+        ax.plot(problemSize, memory,
+                marker=markers[method],
+                markersize=markerSizes[method],
+                markeredgewidth=1.5,
+                color=colors[method],
+                linestyle=linestyles[0],
+                linewidth=lineWidth,
+                alpha=lineAlpha,
+                zorder=zorder[method],
+                label=methodLabels[method])
 
 
 ax.set_xlabel("problem size (dofs)", fontsize=fontSizeXLabel, labelpad=1)
@@ -144,18 +143,6 @@ fig.subplots_adjust(left=0.08, right=0.75, top=0.97, bottom=0.16, wspace=0.3)
 
 
 handles, _ = axes[0].get_legend_handles_labels()
-# methodHandles = [
-#    Line2D(
-#        [0],
-#        [0],
-#        color=colors[method],
-#        linestyle='None',
-#        linewidth=lineWidth,
-#        marker=markers[method],
-#        markersize=markerSize + 2,
-#        label=methodLabels[method])
-#    for method in methods
-# ]
 
 covHandles = [
     Line2D(

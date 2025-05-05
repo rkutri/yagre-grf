@@ -7,7 +7,7 @@ from glob import glob
 
 def read_averaged_data(baseDir, nBatch):
 
-    dataConfig = ["memory", "cost", "error"]
+    dataConfig = ["cost", "memory"]
 
     averagedData = {}
 
@@ -22,45 +22,17 @@ def read_averaged_data(baseDir, nBatch):
             reader = csv.reader(f)
             rows = list(reader)
 
-        if q == "error":
-
-            xData = defaultdict(dict)
-            yData = defaultdict(dict)
-            errorBars = defaultdict(dict)
-
-            for row in rows:
-
-                key, *values = row
-                method, modelCov, variable = key.split("_")
-                data = [float(x) for x in values]
-
-                if variable == "cost":
-                    xData[method][modelCov] = data
-                elif variable == "error":
-                    yData[method][modelCov] = data
-                elif variable == "errorBar":
-                    errorBars[method][modelCov] = data
-                else:
-                    raise RuntimeError(f"Unknown variable: {variable}")
-
-            averagedData[q] = {
-                "xData": dict(xData),
-                "yData": dict(yData),
-                "errorBars": dict(errorBars)
-            }
-
-        else:
-            meshWidths = [float(x) for x in rows[0][1:]]
+            problemSize = [float(x) for x in rows[0][1:]]
             yData = defaultdict(dict)
 
             for row in rows[1:]:
                 key, *values = row
-                method, modelCov = key.split("_")
+                method = key
                 data = [float(x) for x in values]
-                yData[method][modelCov] = data
+                yData[method] = data
 
             averagedData[q] = {
-                "meshWidths": meshWidths,
+                "problemSize": problemSize,
                 "yData": dict(yData)
             }
 
