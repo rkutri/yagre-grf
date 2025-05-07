@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import covariance_functions as cf
+
+from yagregrf.utility.covariances import matern_ptw
 
 # Domain settings
 nDom = 2001
@@ -12,7 +13,7 @@ nu = 2.0
 
 
 def cov_fcn(x):
-    return cf.matern_covariance_ptw(x, ell, nu)
+    return matern_ptw(x, ell, nu)
 
 
 # Create figure with narrower aspect ratio for half-page width
@@ -35,7 +36,7 @@ for n in range(1, nPrd):
     naivePrdCov += np.array([cov_fcn(x - alpha * n) for x in dom])
 
 # Plot naive periodisation with cropped domain
-ax.plot(2 * dom[nDom4:-nDom4],
+ax.plot(2. * dom[nDom4:-nDom4],
         naivePrdCov[nDom4:-nDom4],
         color='tab:green',
         label=r'$\tilde{\varphi}_{1}^{(\pi)}$',
