@@ -96,10 +96,10 @@ class DNAFourierEngine2D(SamplingEngine):
 
             coeff = standard_normal((n + 1, n + 1)) * self._detCoeff
 
-            row_batch = srs.batch_sin_series_rows if rowBC == BC.SINE else srs.batch_cos_series_rows
-            col_batch = srs.batch_sin_series_cols if colBC == BC.SINE else srs.batch_cos_series_cols
+            rowEval = srs.sin_series_rows if rowBC == BC.SINE else srs.cos_series_rows
+            colEval = srs.sin_series_cols if colBC == BC.SINE else srs.cos_series_cols
 
-            R = row_batch(coeff)
-            realisation += col_batch(R)
+            R = rowEval(coeff)
+            realisation += colEval(R)
 
         return 0.5 * realisation[:self._nCrop, :self._nCrop]

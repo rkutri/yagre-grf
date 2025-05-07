@@ -23,7 +23,7 @@ def sin_series(a):
     return np.concatenate(([0.], seriesInner, [0.]))
 
 
-def batch_sin_series_rows(A):
+def sin_series_rows(A):
     """
     Only gives the correct result if 2d array and first row then column
     """
@@ -33,7 +33,7 @@ def batch_sin_series_rows(A):
     return np.pad(inner, pad_width=((0, 0), (1, 1)))
 
 
-def batch_sin_series_cols(A):
+def sin_series_cols(A):
     """
     Only gives the correct result if 2d array and first row then column
     """
@@ -43,7 +43,7 @@ def batch_sin_series_cols(A):
     return np.pad(inner, ((1, 1), (0, 0)))
 
 
-def batch_cos_series_rows(A):
+def cos_series_rows(A):
     """
     Only gives the correct result if 2d array and first row then column
     """
@@ -54,7 +54,7 @@ def batch_cos_series_rows(A):
     return dct(np.pad(B, ((0, 0), (0, 1))), norm="backward", type=1, axis=1)
 
 
-def batch_cos_series_cols(A):
+def cos_series_cols(A):
     """
     Only gives the correct result if 2d array and first row then column
     """
