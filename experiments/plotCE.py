@@ -12,7 +12,7 @@ from experiments.readCEData import read_averaged_data
 # l.rcParams['text.usetex'] = True
 
 methods = ["dna", "ce", "aCE"]
-covs = [r'Gaussian', r'Matérn, $\nu = 5$', r'exponential']
+covs = [r'Gaussian', r'Matérn, $\nu = 6$', r'Matérn, $\nu = 2$', r'exponential']
 
 colors = {
     "dna": "tab:green",
@@ -24,7 +24,7 @@ methodLabels = {
     "dna": "DNA",
     "ce": "Circulant Embedding",
     "aCE": "approximate CE"}
-linestyles = ["-", "--", ":", "-."]
+linestyles = ["-", "--", ":", ":"]
 markers = {"dna": 'o', "ce": '^', "aCE": 's'}
 zorder = {"dna": 7, "ce": 9, "aCE": 8}
 
@@ -34,18 +34,18 @@ markerSizes = {"dna": markerSize, "ce": markerSize - 1, "aCE": markerSize + 1}
 
 baseDir = os.path.join("experiments", "publicationData", "circulantEmbedding")
 errorType = "maxError"
-nBatch = 2
+nBatch = 1
 
 averagedData = read_averaged_data(baseDir, nBatch)
 
-fig, axes = plt.subplots(1, 2, figsize=(6, 2.2))
+fig, axes = plt.subplots(1, 2, figsize=(9, 3.1))
 
 lineWidth = 1.5
-fontSizeXLabel = 9
-fontSizeYLabel = 9
-fontSizeTicks = 8
-tickLabelSize = 6
-fontSizeLegend = 8
+fontSizeXLabel = 14
+fontSizeYLabel = 14
+fontSizeTicks = 12
+tickLabelSize = 10
+fontSizeLegend = 12
 legendMarkerSize = 6
 lineAlpha = 0.9
 circleSize = 225
@@ -139,7 +139,7 @@ ax.set_yscale("log")
 ax.grid(True, which="both", ls="--", linewidth=0.5, alpha=0.6, zorder=1)
 ax.tick_params(axis='both', which='both', labelsize=tickLabelSize)
 
-fig.subplots_adjust(left=0.08, right=0.75, top=0.97, bottom=0.16, wspace=0.3)
+fig.subplots_adjust(left=0.08, right=0.75, top=0.98, bottom=0.15, wspace=0.3)
 
 
 handles, _ = axes[0].get_legend_handles_labels()
@@ -157,9 +157,9 @@ covHandles = [
 methodLegend = plt.legend(
     handles=handles,
     title=r'Method',
-    title_fontproperties=FontProperties(weight='bold'),
+    title_fontproperties=FontProperties(weight='bold', size=1.15*fontSizeLegend),
     fontsize=fontSizeLegend,
-    bbox_to_anchor=(1.03, 1.04),
+    bbox_to_anchor=(1.03, 0.95),
     frameon=True,
     framealpha=0.9,
     markerscale=legendMarkerSize / markerSize
@@ -170,9 +170,9 @@ plt.gca().add_artist(methodLegend)
 plt.legend(
     handles=covHandles,
     title=r'Last Embedding',
-    title_fontproperties=FontProperties(weight='bold'),
+    title_fontproperties=FontProperties(weight='bold', size=1.15*fontSizeLegend),
     fontsize=fontSizeLegend,
-    bbox_to_anchor=(1.03, 0.52),
+    bbox_to_anchor=(1.03, 0.55),
     frameon=True,
     framealpha=0.9,
     markerscale=legendMarkerSize / markerSize
@@ -181,4 +181,4 @@ plt.legend(
 # Save to PDF
 plt.savefig('./ce_comparison.pdf', dpi=300, format='pdf')
 
-plt.show()
+#plt.show()

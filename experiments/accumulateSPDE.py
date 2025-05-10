@@ -9,7 +9,7 @@ from scipy.stats import t
 # Parameters
 DIM = 2
 var = 0.1
-ell = 0.05
+ell = 0.2
 nu = 1.
 nSampBatch = int(2e4)
 

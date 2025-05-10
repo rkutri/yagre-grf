@@ -2,7 +2,7 @@ import os
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.ticker import ScalarFormatter, LogFormatterMathtext
+from matplotlib.ticker import ScalarFormatter, LogFormatterMathtext, NullFormatter
 from matplotlib.font_manager import FontProperties
 from experiments.filename import create_data_string
 from collections import OrderedDict
@@ -13,10 +13,10 @@ from collections import OrderedDict
 
 DIM = 2
 var = 0.1
-ellData = [0.05, 0.05, 0.05]
+ellData = [0.05, 0.1, 0.2]
 nu = 1.0
 nSampBatch = int(2e4)
-nBatch = 12
+nBatch = 25
 
 variables = [("oversampling", "os"), ("memory", "mem"), ("cost", "cost")]
 
@@ -31,7 +31,7 @@ xLabels = {
 }
 
 # Create figure with 3x3 grid of subplots (3 rows, 3 columns)
-fig, axs = plt.subplots(len(ellData), 3, figsize=(9, 7))
+fig, axs = plt.subplots(len(ellData), 3, figsize=(9, 6))
 
 for i, ell in enumerate(ellData):
 
@@ -51,13 +51,13 @@ for i, ell in enumerate(ellData):
         # =============================================================================
 
         lineWidth = 1.5
-        markerSize = 5
-        fontSizeXLabel = 11
-        fontSizeYLabel = 12
+        markerSize = 3
+        fontSizeXLabel = 13
+        fontSizeYLabel = 14
         fontSizeTicks = 9
-        tickLabelSize = 6
-        fontSizeLegend = 10
-        legendMarkerSize = 5
+        tickLabelSize = 10
+        fontSizeLegend = 14
+        legendMarkerSize = 4
         lineAlpha = 0.9
 
         # =============================================================================
@@ -197,17 +197,17 @@ for i, ell in enumerate(ellData):
             if i == 0:
                 x0 = 2000
                 y0 = 0.02
-                labelOffset = 1500
+                labelOffset = 2750
 
             elif i == 1:
                 x0 = 1750
                 y0 = 0.01
-                labelOffset = 1250
+                labelOffset = 2250
 
             elif i == 2:
                 x0 = 1250
                 y0 = 0.005
-                labelOffset = 1000
+                labelOffset = 1750
 
             baseScale = 2.0
             rate = -0.5
@@ -219,8 +219,8 @@ for i, ell in enumerate(ellData):
             ax.plot([x0, x1], [y1, y1], color='black', lw=lineWidth)
             ax.plot([x1, x1], [y0, y1], color='black', lw=lineWidth)
 
-            ax.text(x1 + labelOffset, 1.05 * y0, f"1/2", color='k',
-                    horizontalalignment='center', verticalalignment='bottom', fontsize=0.5 * fontSizeTicks)
+            ax.text(x1 + labelOffset, 0.95 * y0, f"1/2", color='k',
+                    horizontalalignment='center', verticalalignment='bottom', fontsize=fontSizeTicks)
 
         # =============================================================================
         # Customize Axes
@@ -241,6 +241,10 @@ for i, ell in enumerate(ellData):
         # Set tick label sizes for both major and minor ticks on both axes
         ax.tick_params(axis='both', which='both', labelsize=tickLabelSize)
 
+        # Hide minor tick labels
+        ax.xaxis.set_minor_formatter(NullFormatter())
+        ax.yaxis.set_minor_formatter(NullFormatter())
+
 # =============================================================================
 # Legend Setup
 # =============================================================================
@@ -255,27 +259,27 @@ spdeHandles = handles[2:]
 
 dnaLegend = plt.legend(
     handles=dnaHandles, labels=dnaLabels, title=r'DNA',
-    title_fontproperties=FontProperties(weight='bold'),
-    fontsize=fontSizeLegend, bbox_to_anchor=(1.705, 2.15), frameon=True,
+    title_fontproperties=FontProperties(weight='bold', size=1.15*fontSizeLegend),
+    fontsize=fontSizeLegend, bbox_to_anchor=(2.125, 2.7), frameon=True,
     framealpha=0.9, markerscale=legendMarkerSize / markerSize)
 
 plt.gca().add_artist(dnaLegend)
 
 plt.legend(
     handles=spdeHandles, labels=spdeLabels, title=r'SPDE',
-    title_fontproperties=FontProperties(weight='bold'),
-    fontsize=fontSizeLegend, bbox_to_anchor=(2.0, 1.75), frameon=True,
+    title_fontproperties=FontProperties(weight='bold', size=1.15*fontSizeLegend),
+    fontsize=fontSizeLegend, bbox_to_anchor=(2.6, 2.), frameon=True,
     framealpha=0.9, markerscale=legendMarkerSize / markerSize)
 # =============================================================================
 # Final Layout Adjustments and Save Figure
 # =============================================================================
 
 fig.subplots_adjust(
-    left=0.07,
-    right=0.77,
-    top=0.97,
-    bottom=0.1,
-    wspace=0.2,
+    left=0.08,
+    right=0.72,
+    top=0.98,
+    bottom=0.08,
+    wspace=0.29,
     hspace=0.18)
 fig.savefig(
     './spde_comparison.pdf',

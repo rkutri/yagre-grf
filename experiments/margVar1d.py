@@ -41,7 +41,7 @@ ftEval = np.array([cov_ftrans(0.5 * m) for m in range(nDof + 1)])
 coeff = np.sqrt(ftEval)
 
 # sampling
-nSamp = int(8e5)
+nSamp = int(5e5)
 
 dirSample = []
 neuSample = []
@@ -65,14 +65,13 @@ dirMv = np.var(dirSample, axis=0)
 neuMv = np.var(neuSample, axis=0)
 
 
-# Improve plot aesthetics for scientific publication
-fig, ax = plt.subplots(1, 1, figsize=(4, 4))  # Adjust size for A4 paper
+fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 
 mpl.rcParams['figure.dpi'] = 300
 
 # Line width and font size
 lw = 3.
-fontsize = 11
+fontsize = 14
 
 # Plotting with improved styling
 ax.tick_params(axis='both', which='major', labelsize=fontsize)
@@ -97,15 +96,13 @@ ax.set_xlabel(r'location $x$', fontsize=fontsize, labelpad=10)
 ax.set_ylabel(r'sample variance $\sigma^2(x)$', fontsize=fontsize, labelpad=10)
 
 # Legend configuration
-ax.legend(loc='best', prop={'size': fontsize}, framealpha=1.)
+ax.legend(loc='best', prop={'size': 1.25*fontsize}, framealpha=1.)
 
-# Aspect ratio and layout adjustments
-ax.set_aspect(aspect=0.35)
 plt.tight_layout()
 
 # Show or save plot
 plt.show()
 
 # Optionally, save for high-quality export to LaTeX
-fig.savefig('marginal_variances_1d_dir_neu.pdf',
+fig.savefig('margVar1d.pdf',
             bbox_inches='tight', format='pdf')

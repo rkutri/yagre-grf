@@ -46,11 +46,12 @@ print(f"Filename ID set to: '{filenameID}'")
 
 dataBaseDir = os.path.join("experiments", "publicationData")
 
-dofPerDim = [8, 16, 32, 64, 128, 256, 512]
+dofPerDim = [8, 16, 32, 64, 128, 256, 512, 1024, 2048]
 
 models = [
     "gaussian",
-    "matern",
+    "matern_6",
+    "matern_2",
     "exponential"
 ]
 
@@ -66,7 +67,8 @@ assert nSamp % 2 == 0
 
 covParams = {
     "gaussian": {"ell": 0.1},
-    "matern": {"ell": 0.1, "nu": 5.},
+    "matern_6": {"ell": 0.1, "nu": 6.},
+    "matern_2": {"ell": 0.1, "nu":2.},
     "exponential": {"ell": 0.1}
 }
 
@@ -78,9 +80,13 @@ covFcns = {
             x,
             covParams["gaussian"]["ell"],
             margVar=variance),
-    "matern":
-        lambda x: matern_ptw(x, covParams["matern"]["ell"],
-                             covParams["matern"]["nu"],
+    "matern_6":
+        lambda x: matern_ptw(x, covParams["matern_6"]["ell"],
+                             covParams["matern_6"]["nu"],
+                             margVar=variance),
+    "matern_2":
+        lambda x: matern_ptw(x, covParams["matern_2"]["ell"],
+                             covParams["matern_2"]["nu"],
                              margVar=variance),
     "exponential":
         lambda x: matern_ptw(
@@ -94,9 +100,13 @@ pwSpecs = {
     "gaussian":
         lambda x: gaussian_fourier_ptw(
             x, covParams["gaussian"]["ell"], dim=DIM, margVar=variance),
-    "matern":
-        lambda x: matern_fourier_ptw(x, covParams["matern"]["ell"],
-                                     covParams["matern"]["nu"],
+    "matern_6":
+        lambda x: matern_fourier_ptw(x, covParams["matern_6"]["ell"],
+                                     covParams["matern_6"]["nu"],
+                                     dim=DIM, margVar=variance),
+    "matern_2":
+        lambda x: matern_fourier_ptw(x, covParams["matern_2"]["ell"],
+                                     covParams["matern_2"]["nu"],
                                      dim=DIM, margVar=variance),
     "exponential":
         lambda x: matern_fourier_ptw(

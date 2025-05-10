@@ -4,19 +4,21 @@ import matplotlib.pyplot as plt
 import scipy.sparse as sps
 import fenics as fncs
 import mshr as mg
-import covariance_functions as covs
+from matplotlib.colors import Normalize
+from matplotlib.colorbar import ColorbarBase
 
 from numpy.random import standard_normal
 from sksparse.cholmod import cholesky
 from scipy.special import gamma
 from scipy.sparse.linalg import spsolve
 
-import utility
+from yagregrf.utility.accumulation import MarginalVarianceAccumulator
 
-nSamp = 10
+
+nSamp = 50000
 nMesh = 50
 
-cb = True
+plotCB = False
 
 
 def on_dirichlet_outer(x, useDir, tol, outerRadius=1.):
@@ -49,7 +51,7 @@ def on_dirichlet_annulus(x, useDir, tol, innerRadius, outerRadius):
             or on_dirichlet_inner(x, useDir, tol, innerRadius))
 
 
-def on_dirichlet_ship(x, useDir, tol):
+def on_dirichlet_ship_full(x, useDir, tol):
 
     if (useDir):
 
@@ -76,6 +78,40 @@ def on_dirichlet_ship(x, useDir, tol):
 
         return False
 
+    else:
+        return False
+
+def on_dirichlet_ship_lr(x, tol):
+
+    # upper and lower edges
+    if (x[1] < tol or x[1] > 1. - tol):
+        return False
+
+    # left edges
+    if (x[0] < 0.25 + tol):
+        return True
+
+    q1 = np.array([x[0], x[1] - 0.5])
+
+    # left arc (inwards)
+    if (np.sqrt(np.dot(q1, q1)) < 0.5 + tol):
+        return True
+
+    q2 = np.array([x[0] - 2., x[1] - 0.5])
+
+    # right arc (outwards)
+    if (x[0] > 2.):
+        if (np.sqrt(np.dot(q2, q2)) > 0.5 - tol):
+            return True
+
+    return False
+
+def on_dirichlet_ship_tb(x, tol):
+
+    # upper and lower edges
+    if (x[1] < tol or x[1] > 1. - tol):
+        return True
+    
     else:
         return False
 
@@ -148,10 +184,10 @@ m = u * v * fncs.dx
 # boundary conditions
 dirBCVal = fncs.Constant(0.)
 
-TOL = 1e-9
+TOL = 1e-2
 meshTol = 1. / (nMesh + TOL)
 
-if (meshType == ANNULUS):
+if meshType == ANNULUS:
 
     bc_dir = fncs.DirichletBC(
         V, dirBCVal, lambda x: on_dirichlet_annulus(
@@ -160,7 +196,7 @@ if (meshType == ANNULUS):
         V, dirBCVal, lambda x: on_dirichlet_annulus(
             x, False, meshTol, radius1, radius0))
 
-elif (meshType == DISC):
+elif meshType == DISC:
 
     bc_dir = fncs.DirichletBC(
         V, dirBCVal, lambda x: on_dirichlet_disc(
@@ -169,35 +205,53 @@ elif (meshType == DISC):
         V, dirBCVal, lambda x: on_dirichlet_disc(
             x, False, meshTol, radius0))
 
-else:
-    bc_dir = fncs.DirichletBC(
-        V, dirBCVal, lambda x: on_dirichlet_ship(x, True, meshTol))
-    bc_neu = fncs.DirichletBC(
-        V, dirBCVal, lambda x: on_dirichlet_ship(x, False, meshTol))
+elif meshType == SHIP:
+
+    bc_dir_full = fncs.DirichletBC(
+        V, dirBCVal, lambda x: on_dirichlet_ship_full(x, True, meshTol))
+    bc_neu_full = fncs.DirichletBC(
+        V, dirBCVal, lambda x: on_dirichlet_ship_full(x, False, meshTol))
+    bc_dir_lr = fncs.DirichletBC(
+        V, dirBCVal, lambda x: on_dirichlet_ship_lr(x, meshTol))
+    bc_dir_tb = fncs.DirichletBC(
+        V, dirBCVal, lambda x: on_dirichlet_ship_tb(x, meshTol))
 
 
 print("assemble matrices")
 
 # assembly
-A_dir = fncs.assemble(a)
-A_neu = A_dir.copy()
+A_neu_full = fncs.assemble(a)
+A_dir_full = A_neu_full.copy()
+A_dir_lr = A_neu_full.copy()
+A_dir_tb = A_neu_full.copy()
 
-M_dir = fncs.assemble(m)
-M_neu = M_dir.copy()
+M_neu_full = fncs.assemble(m)
+M_dir_full = M_neu_full.copy()
+M_dir_lr = M_neu_full.copy()
+M_dir_tb = M_neu_full.copy()
 
-bc_dir.apply(A_dir)
-bc_neu.apply(A_neu)
+bc_dir_full.apply(A_dir_full)
+bc_neu_full.apply(A_neu_full)
+bc_dir_lr.apply(A_dir_lr)
+bc_dir_tb.apply(A_dir_tb)
 
-bc_dir.apply(M_dir)
-bc_neu.apply(M_neu)
+bc_dir_full.apply(M_dir_full)
+bc_neu_full.apply(M_neu_full)
+bc_dir_lr.apply(M_dir_lr)
+bc_dir_tb.apply(M_dir_tb)
 
 print("set up solver")
 
 # options are: “umfpack” “mumps” “superlu” “superlu_dist” “petsc”
-solver_dir = fncs.LUSolver(A_dir, 'umfpack')
-solver_neu = fncs.LUSolver(A_neu, 'umfpack')
-solver_dir.parameters['symmetric'] = True
-solver_neu.parameters['symmetric'] = True
+solver_dir_full = fncs.LUSolver(A_dir_full, 'umfpack')
+solver_neu_full = fncs.LUSolver(A_neu_full, 'umfpack')
+solver_dir_lr = fncs.LUSolver(A_dir_lr, 'umfpack')
+solver_dir_tb = fncs.LUSolver(A_dir_tb, 'umfpack')
+
+solver_dir_full.parameters['symmetric'] = True
+solver_neu_full.parameters['symmetric'] = True
+solver_dir_lr.parameters['symmetric'] = True
+solver_dir_tb.parameters['symmetric'] = True
 
 print("factorise white noise")
 
@@ -221,14 +275,16 @@ else:  # use mass lumping
 
     print("  - using mass lumping")
 
-    H_dir = white_noise_factor(M_dir, V)
-    H_neu = white_noise_factor(M_neu, V)
+    H_dir_full = white_noise_factor(M_dir_full, V)
+    H_neu_full = white_noise_factor(M_neu_full, V)
+    H_dir_lr = white_noise_factor(M_dir_lr, V)
+    H_dir_tb = white_noise_factor(M_dir_tb, V)
 
-nBC = 2
+nBC = 4
 
-H = [H_dir, H_neu]
-bc = [bc_dir, bc_neu]
-solver = [solver_dir, solver_neu]
+H = [H_dir_full, H_neu_full, H_dir_lr, H_dir_tb]
+bc = [bc_dir_full, bc_neu_full, bc_dir_lr, bc_dir_tb]
+solver = [solver_dir_full, solver_neu_full, solver_dir_lr, solver_dir_tb]
 
 
 # determine how often to solve in SPDE
@@ -239,17 +295,21 @@ assert nuInt % 2 == 1
 nSolve = int(np.rint(0.5 * (nu + 1.)) + TOL)
 print("performing " + str(nSolve) + " solve(s) per realisation")
 
-genericSol_dir = fncs.Function(V)
-genericSol_neu = fncs.Function(V)
-genericSol_avg = fncs.Function(V)
+genericSol_dir_full = fncs.Function(V)
+genericSol_neu_full = fncs.Function(V)
+genericSol_dir_lr = fncs.Function(V)
+genericSol_dir_tb = fncs.Function(V)
 
-genericSol = [genericSol_dir, genericSol_neu, genericSol_avg]
+genericSol = [genericSol_dir_full, genericSol_neu_full, genericSol_dir_lr, genericSol_dir_tb]
 
-nodalValues_dir = []
-nodalValues_neu = []
-nodalValues_avg = []
+nodalValues_dir_full = []
+nodalValues_neu_full = []
+nodalValues_dir_lr = []
+nodalValues_dir_tb = []
 
-nodalValues = [nodalValues_dir, nodalValues_neu, nodalValues_avg]
+nodalValues = [nodalValues_dir_full, nodalValues_neu_full, nodalValues_dir_lr, nodalValues_dir_tb]
+
+avgMV = MarginalVarianceAccumulator(V.dim())
 
 for n in range(nSamp):
 
@@ -286,74 +346,52 @@ for n in range(nSamp):
 
             solver[i].solve(u.vector(), b)
 
-        if (n == 0):
-            genericSol[i].vector()[:] = u.vector()[:]
+        nodalValues[i] = u.vector()[:]
 
-        nodalValues[i] += [u.vector()[:]]
+    avgSol = nodalValues[0]
+    for ii in range(1, nBC):
+        avgSol += nodalValues[ii]
 
-    if (n == 0):
-        genericSol[2].vector()[:] = (genericSol[0].vector()[:] +
-                                     genericSol[1].vector()[:]) / np.sqrt(2.)
+    avgMV.update(0.5 * avgSol)
 
-    nodalValues[2] += [(nodalValues[0][n] + nodalValues[1][n]) / np.sqrt(2.)]
+mvFcn = fncs.Function(V)
+mvFcn.vector()[:] = avgMV.marginalVariance
 
 
 print("computing marginal variance")
 
 
-margVarDofs_dir = np.var(np.array(nodalValues[0]), axis=0)
-margVarDofs_neu = np.var(np.array(nodalValues[1]), axis=0)
-margVarDofs_avg = np.var(np.array(nodalValues[2]), axis=0)
-
-marginalVariance_dir = fncs.Function(V)
-marginalVariance_neu = fncs.Function(V)
-marginalVariance_avg = fncs.Function(V)
-
-if cb:
-    margVarDofs_avg[0] = 0.
-    margVarDofs_avg[1] = 6.
-
-marginalVariance_dir.vector()[:] = margVarDofs_dir
-marginalVariance_neu.vector()[:] = margVarDofs_neu
-marginalVariance_avg.vector()[:] = margVarDofs_avg
-
 print("plotting")
 
 
-# Adjust line width and font size
-lw = 3
+# Plotting settings
 fontsize = 12
+cmap_name = "turbo"
+vmin, vmax = 0.0, 4.0
+ticks = [0, 1, 2, 3, 4]
 
-# Colormap and color range settings
-cmap = "turbo"
-vmin, vmax = 0.0, 4.0  # Data values mapped to colors
-colorbar_range = [0, 1, 2, 3, 4, 5, 6]
+# Create figure
+fig = plt.figure(figsize=(8, 6))
+ax = plt.gca()
 
-# Create figure with specific aspect ratio
-fig_width = 8  # Width of the figure
-fig_height = 6  # Height of the figure
-plt.figure(figsize=(fig_width, fig_height))
-
-# Plot the image with colormap and limits
-mvPlt = fncs.plot(marginalVariance_avg)
-mvPlt.set_cmap(cmap)
+# Plot the function (FEniCS uses current axis)
+mvPlt = fncs.plot(mvFcn)
+mvPlt.set_cmap(plt.colormaps[cmap_name])
 mvPlt.set_clim(vmin, vmax)
 
-plt.gca().set_aspect("equal")
-plt.gca().tick_params(which='both', size=0, labelsize=0)
+# Clean plot appearance
+ax.set_aspect("equal")
+ax.axis("off")
 
-if cb:
-    cbar = plt.colorbar(mvPlt, ticks=colorbar_range, extend='both')
-    cbar.set_ticks(colorbar_range)
+# Colorbar with fixed ticks and no label
+if plotCB:
+    cbar = plt.colorbar(mvPlt, ax=ax, orientation='vertical', extend='both')
+    cbar.set_ticks(ticks)
+    cbar.set_ticklabels([str(t) for t in ticks])  # Force exact tick labels
     cbar.ax.tick_params(labelsize=fontsize)
 
-# Remove the box around the plot
-plt.axis('off')
-
+# Final layout and save
 plt.tight_layout()
-plt.savefig(
-    'margVar2d_ship_colorbar.png',
-    bbox_inches='tight',
-    format='png',
-    dpi=800)
+plt.savefig("margVar2d_ship.png", bbox_inches='tight', dpi=800)
 plt.show()
+
