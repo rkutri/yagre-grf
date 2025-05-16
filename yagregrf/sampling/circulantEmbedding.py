@@ -164,7 +164,7 @@ class ApproximateCirculantEmbeddingEngine2D(CirculantEmbeddingEngine2D):
     def __init__(self, cov_ptw_callable, vertPerDim, domExt=1., padding=0):
 
         super().__init__(cov_ptw_callable, vertPerDim, domExt,
-                autotunePadding=False, padding=padding)
+                         autotunePadding=False, padding=padding)
 
     def _determine_valid_lambda(self, cov_ptw_callable):
 
